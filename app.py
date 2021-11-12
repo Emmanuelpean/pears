@@ -540,6 +540,10 @@ with st.expander('Changelog'):
     * Added website icon
     * Added video tutorial
     * Now accept a wider range of data""")
+# ------------------------------------------------------ ANALYTICS -----------------------------------------------------
+
+components.html("""<a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img 
+src="https://c.statcounter.com/12673269/0/1c2a1959/1/" alt="Web Analytics" ></a>""")
 
 # ----------------------------------------------------- DISCLAIMER -----------------------------------------------------
 
@@ -550,9 +554,3 @@ with st.expander('Disclaimer'):
     LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE 
     USE OR OTHER DEALINGS IN THE SOFTWARE.""")
 
-# ------------------------------------------------------ ANALYTICS -----------------------------------------------------
-
-components.html("""<a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img 
-src="https://c.statcounter.com/12673269/0/1c2a1959/1/" alt="Web Analytics" ></a>""")
-
-# TODO update the video
