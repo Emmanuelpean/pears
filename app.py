@@ -25,8 +25,6 @@ from core import resources
 st.set_page_config('Pears', resources.icon_filename, layout='wide')
 st.markdown("""<style> #MainMenu {visibility: hidden;} footer {visibility: hidden;} </style>""", unsafe_allow_html=True)  # hide main menu and footer
 st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)  # set all radio buttons in row
-components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" 
-src="https://pears-tracking.herokuapp.com/umami.js"></script>""")  # analytics
 
 # Load the models and store them in the session state
 if 'models' not in st.session_state:
@@ -552,3 +550,7 @@ with st.expander('Disclaimer'):
     LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE 
     USE OR OTHER DEALINGS IN THE SOFTWARE.""")
 
+# ------------------------------------------------------ ANALYTICS -----------------------------------------------------
+
+components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" 
+src="https://pears-tracking.herokuapp.com/umami.js"></script>""")
