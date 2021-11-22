@@ -25,6 +25,8 @@ from core import resources
 st.set_page_config('Pears', resources.icon_filename, layout='wide')
 st.markdown("""<style> #MainMenu {visibility: hidden;} footer {visibility: hidden;} </style>""", unsafe_allow_html=True)  # hide main menu and footer
 st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)  # set all radio buttons in row
+components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" 
+src="https://pears-tracking.herokuapp.com/umami.js"></script>""")  # analytics
 
 # Load the models and store them in the session state
 if 'models' not in st.session_state:
@@ -549,12 +551,4 @@ with st.expander('Disclaimer'):
     IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER 
     LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE 
     USE OR OTHER DEALINGS IN THE SOFTWARE.""")
-
-# ------------------------------------------------------ ANALYTICS -----------------------------------------------------
-
-# components.html("""<a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img
-# src="https://c.statcounter.com/12673269/0/1c2a1959/1/" alt="" ></a>""")
-
-
-components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" src="https://pears-tracking.herokuapp.com/umami.js"></script>""")
 
