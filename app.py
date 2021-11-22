@@ -70,7 +70,7 @@ if st.session_state.fit_mode != fit_mode:  # store the new fit mode and reset th
 # -------------------------------------------------------- DATA --------------------------------------------------------
 
 # File uploader
-input_filename = st.sidebar.file_uploader('Data file', key='input_filename_', help='Input filename. Any text or cvs file.')
+input_filename = st.sidebar.file_uploader('Data file', key='input_filename_', help='Data file. Any text or cvs file.')
 
 # Data format
 data_format_help = 'Select the data format of your file between *X/Y1/Y2/Y3...*: first column is the time (in ns) ' \
@@ -552,5 +552,9 @@ with st.expander('Disclaimer'):
 
 # ------------------------------------------------------ ANALYTICS -----------------------------------------------------
 
-components.html("""<a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img 
-src="https://c.statcounter.com/12673269/0/1c2a1959/1/" alt="Web Analytics" ></a>""")
+# components.html("""<a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img
+# src="https://c.statcounter.com/12673269/0/1c2a1959/1/" alt="" ></a>""")
+
+
+components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" src="https://pears-tracking.herokuapp.com/umami.js"></script>""")
+
