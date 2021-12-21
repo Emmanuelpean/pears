@@ -479,7 +479,7 @@ with st.expander('Model & computational details'):
     (10<sup>-20</sup>, 10<sup>-2</sup>), (10<sup>-19</sup>, 10<sup>-3</sup>) and (10<sup>-19</sup>, 10<sup>-2</sup>)). 
     Note that in the case of the bimolecular-trapping-detrapping model, only set of guess values satisfying $k_T>k_B$ 
     and $k_T>k_D$ are considered to keep the computational time reasonable. Fitting is then carried using each set of 
-    guess values as schematically representated below: %s
+    guess values as schematically represented below: %s
     In the case where all the optimisations converge towards a similar solution, it can be assumed that only 1 solution
     exist and that therefore the parameter values obtained accurately describe the system measured. However, if the fits 
     converge toward multiple solutions, it is not possible to ascertain which solution represents the system accurately."""
