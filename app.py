@@ -437,7 +437,7 @@ with st.expander('Model & computational details'):
     st.markdown(r"""Fitting is carried using the least square optimisation. For a dataset containing $M$ curves, 
     each containing $N_i$ data points, the residue $SS_{res}$ is:""")
     st.latex(r"""SS_{res}=\sum_i^M\sum_j^{N_i}\left(y_{i,j}-F(t_{i,j},A_{i})\right)^2""")
-    st.markdown("""where $y_{i,j}$ is the intensity associated with time $t_{i,j}$ of curve point $j$ or curve $i$.
+    st.markdown("""where $y_{i,j}$ is the intensity associated with time $t_{i,j}$ of point $j$ of curve $i$.
     $A_i$ are the model parameters associated with curve $i$ and $F$ is the fitting model given by:""")
     st.latex(r'F(t,I_0, y_0, k_B,...)=I_0 \frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0')
     st.markdown(""" where $I_0$ is an intensity factor and $y_0$ is an intensity offset. Contrary to the other parameters of 
