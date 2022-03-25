@@ -35,12 +35,14 @@ if 'results' not in st.session_state:
     st.session_state.results = []  # list of all the results
 if 'fit_mode' not in st.session_state:
     st.session_state.fit_mode = None  # last fit mode used
-if 'data' not in st.session_state:
-    st.session_state.data = [[None], [None]]  # input data
 if 'period' not in st.session_state:
     st.session_state.period = ''  # excitation repetition period
 if 'carrier_accumulation' not in st.session_state:
     st.session_state.carrier_accumulation = None  # carrier accumulation
+if 'preprocess' not in st.session_state:
+    st.session_state.preprocess = False
+if 'file' not in st.session_state:
+    st.session_state.file = None
 
 
 def reset_all():
@@ -84,47 +86,58 @@ data_delimiter = st.sidebar.radio('Data delimiter', ['tab/space', 'comma', 'semi
                                   key='data_delimiter')
 data_delimiter = {'tab/space': None, 'comma': ',', 'semicolon': ';'}[data_delimiter]
 
+# Processing data
+preprocess_help = 'Shift the decay maximum intensity to $t=0$ and normalise the intensity.'
+process_input = st.sidebar.checkbox('Pre-process data', help=preprocess_help, key='preprocess_')
+
 # Load the data
 data_message = st.empty()
-xs_data, ys_data = [None], [None]
+xs_data, ys_data = None, None
 if input_filename is not None:
     try:
-        data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True)
+        # Find data index and load the data
+        index = utils.get_data_index(input_filename.getvalue().split(), data_delimiter)
+        data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
+
+        # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
             xs_data, ys_data = np.array([data[0]] * (len(data) - 1)), data[1:]
         else:
             xs_data, ys_data = data[::2], data[1::2]
 
-        # Process the data
-        xs_data = np.array([x_data[np.invert(np.isnan(x_data))] for x_data in xs_data])
-        ys_data = np.array([y_data[np.invert(np.isnan(y_data))] for y_data in ys_data])
+        # Check the data
+        xs_data = [x_data[np.invert(np.isnan(x_data))] for x_data in xs_data]
+        ys_data = [y_data[np.invert(np.isnan(y_data))] for y_data in ys_data]
 
         # Check consistency
         if len(xs_data) != len(ys_data):
             data_message.error('The number of X columns is not equal to the number of Y columns.')
-            raise ValueError()
+            raise AssertionError()
         if any([len(x_data) == 0 for x_data in xs_data]) or any([len(y_data) == 0 for y_data in ys_data]):
-            raise ValueError()
+            raise AssertionError()
+
+        # Process the data
+        if process_input:
+            xs_data, ys_data = utils.process_data(xs_data, ys_data)
 
         data_message.success('Data successfully loaded')
 
-    except (ValueError, IOError):
-        xs_data, ys_data = [None], [None]
+    except (ValueError, IOError, TypeError, AssertionError):  # if an error occurs during the file reading
+        xs_data, ys_data = None, None
         data_message.error('Uh-oh! The data could not be loaded')
+
 else:
     data_message.info('Load a data file')
 
-# Reset the results and display if the new data are different from the new ones
-if not np.all([np.all(x1 == x2) for x1, x2 in zip(st.session_state.data[0], xs_data)]) \
-        and not np.all([np.all(x1 == x2) for x1, x2 in zip(st.session_state.data[1], ys_data)]):
+if input_filename != st.session_state.file:
     reset_all()
-    st.session_state.data = [xs_data, ys_data]
+st.session_state.file = input_filename
 
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
 
 fluence_message = st.empty()
 N0s = None
-if xs_data[0] is not None:
+if xs_data is not None:
     N0_help = r'Photoexcited carrier concentration(s separated by commas), calculated as ' \
               r'$\mathtt{N_0=A\frac{I_0}{E_{photon}D}}$ where $\mathtt{I_0}$ is the excitation pulse fluence ' \
               r'(in $\mathtt{J/cm^2}$), $\mathtt{D}$ is the film thickness (in $\mathtt{cm}$), $\mathtt{E_{photon}}$ ' \
@@ -357,7 +370,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
 # ---------------------------------------------------- DATA DISPLAY ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-elif xs_data[0] is not None:
+elif xs_data is not None:
 
     with results_container.container():
         st.markdown("""#### Input data""")
@@ -373,7 +386,7 @@ elif xs_data[0] is not None:
 
 # --------------------------------------------------- APP DESCRIPTION --------------------------------------------------
 
-with st.expander('About', xs_data[0] is None):
+with st.expander('About', xs_data is None):
     st.info("""*Pears* is a web app to easily fit time-resolved photoluminescence (TRPL) data of perovskite materials.
 Two models can be used, which are extensively discussed [here](https://doi.org/10.1039/D0CP04950F).
 - The Bimolecular-Trapping model considers assumes no doping and that the trap states remain mostly empty over time
@@ -492,7 +505,8 @@ with st.expander('Getting started'):
     data1_link = utils.generate_downloadlink(resources.test_file1, text='data set 1')
     data2_link = utils.generate_downloadlink(resources.test_file2, text='data set 2')
     st.markdown("""Follow these steps to fit TRPL decays.""")
-    st.markdown("""1. Upload your data and select the data format (text files and csv are supported);
+    st.markdown("""1. Upload your data and select the data format (text files and csv are supported). 
+    Check the "Pro-process data" box for PEARS to shift the decay(s) and normalise it;
     * _e.g._ %s, 
     * _e.g._ %s""" % (data1_link, data2_link), unsafe_allow_html=True)
 
@@ -523,8 +537,10 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### March 2022 - V 0.3.1
+    * Added new "Pre-process" option
+    * Files with a header can now be uploaded 
     #### November 2021 - V 0.3.0
-    * Updated code to Python 3.9 & streamlit 1.1 
     * Added intensity parameter to the fitting procedure
     * Added new file input format (X1/Y1/X2/Y2)
     * Updated app layout

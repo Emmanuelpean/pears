@@ -258,6 +258,40 @@ def get_power_labels(N0s):
     return ['N<sub>0</sub> = ' + get_power_text(N0, -1) + ' cm<sup>-3</sup>' for N0 in N0s]
 
 
+def process_data(xs_data, ys_data):
+    """ Process the data
+    :param list xs_data: x data
+    :param list ys_data: y data """
+
+    for i in range(len(xs_data)):
+        index = ys_data[i].argmax()
+        xs_data[i] = xs_data[i][index:]  # reduce range x
+        xs_data[i] -= xs_data[i][0]  # shift x
+        ys_data[i] = ys_data[i][index:]  # reduce range y
+        ys_data[i] /= ys_data[i][0]  # normalise y
+    return xs_data, ys_data
+
+
+def get_data_index(content, delimiter=None):
+    """ Retrieve the index of the line where the data starts
+    :param list of str content: list of strings
+    :param str or None delimiter: delimiter of the float data
+
+    Example
+    -------
+    >>> get_data_index(['first line', 'second line', '1 2 3'])
+    2"""
+
+    for index, line in enumerate(content):
+
+        if line != '':
+            try:
+                [float(f) for f in line.split(delimiter)]
+                return index
+            except ValueError:
+                continue
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

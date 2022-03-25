@@ -55,7 +55,7 @@ for popt in popts1:
     concentration1 = bt_model.calculate_concentrations(xdata[0], **{key: popt[key] for key in popt if key not in ('y_0', 'I')})
     concentrations1.append({key: np.concatenate(concentration1[key]) for key in concentration1})
 
-plot.plot_carrier_concentrations(xdata[0], concentrations1, N0s, labels, 'Time (ns)', bt_model).show()
+plot.plot_carrier_concentrations(xdata, concentrations1, N0s, labels, 'Time (ns)', bt_model).show()
 
 
 concentrations3 = []
@@ -63,7 +63,7 @@ for popt in popts3:
     concentration3 = btd_model.calculate_concentrations(xdata[0], **{key: popt[key] for key in popt if key not in ('y_0', 'I')})
     concentrations3.append({key: np.concatenate(concentration3[key]) for key in concentration3})
 
-plot.plot_carrier_concentrations(xdata[0], concentrations3, N0s, labels, 'Time (ns)', btd_model).show()
+plot.plot_carrier_concentrations(xdata, concentrations3, N0s, labels, 'Time (ns)', btd_model).show()
 
 
 # -------------------------------------------------- FITTING ANALYSIS --------------------------------------------------
