@@ -72,7 +72,8 @@ if st.session_state.fit_mode != fit_mode:  # store the new fit mode and reset th
 # -------------------------------------------------------- DATA --------------------------------------------------------
 
 # File uploader
-input_filename = st.sidebar.file_uploader('Data file', key='input_filename_', help='Data file. Any text or cvs file.')
+input_filename = st.sidebar.file_uploader('Data file', key='input_filename_', help='Data file. Any text or cvs file.',
+                                          on_change=reset_all)
 
 # Data format
 data_format_help = 'Select the data format of your file between *X/Y1/Y2/Y3...*: first column is the time (in ns) ' \
@@ -128,10 +129,6 @@ if input_filename is not None:
 
 else:
     data_message.info('Load a data file')
-
-if input_filename != st.session_state.file:
-    reset_all()
-st.session_state.file = input_filename
 
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
 
