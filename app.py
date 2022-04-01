@@ -35,6 +35,8 @@ if 'results' not in st.session_state:
     st.session_state.results = []  # list of all the results
 if 'fit_mode' not in st.session_state:
     st.session_state.fit_mode = None  # last fit mode used
+if 'data' not in st.session_state:
+    st.session_state.data = [[None], [None]]  # input data
 if 'period' not in st.session_state:
     st.session_state.period = ''  # excitation repetition period
 if 'carrier_accumulation' not in st.session_state:
@@ -92,7 +94,7 @@ process_input = st.sidebar.checkbox('Pre-process data', help=preprocess_help, ke
 
 # Load the data
 data_message = st.empty()
-xs_data, ys_data = None, None
+xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
         # Find data index and load the data
@@ -123,17 +125,23 @@ if input_filename is not None:
         data_message.success('Data successfully loaded')
 
     except (ValueError, IOError, TypeError, AssertionError):  # if an error occurs during the file reading
-        xs_data, ys_data = None, None
+        xs_data, ys_data = [None], [None]
         data_message.error('Uh-oh! The data could not be loaded')
 
 else:
     data_message.info('Load a data file')
 
+# Reset the results and display if the new data are different from the new ones
+if not np.all([np.all(x1 == x2) for x1, x2 in zip(st.session_state.data[0], xs_data)]) \
+        and not np.all([np.all(x1 == x2) for x1, x2 in zip(st.session_state.data[1], ys_data)]):
+    reset_all()
+    st.session_state.data = [xs_data, ys_data]
+
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
 
 fluence_message = st.empty()
 N0s = None
-if xs_data is not None:
+if xs_data[0] is not None:
     N0_help = r'Photoexcited carrier concentration(s separated by commas), calculated as ' \
               r'$\mathtt{N_0=A\frac{I_0}{E_{photon}D}}$ where $\mathtt{I_0}$ is the excitation pulse fluence ' \
               r'(in $\mathtt{J/cm^2}$), $\mathtt{D}$ is the film thickness (in $\mathtt{cm}$), $\mathtt{E_{photon}}$ ' \
@@ -366,7 +374,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
 # ---------------------------------------------------- DATA DISPLAY ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-elif xs_data is not None:
+elif xs_data[0] is not None:
 
     with results_container.container():
         st.markdown("""#### Input data""")
@@ -382,7 +390,7 @@ elif xs_data is not None:
 
 # --------------------------------------------------- APP DESCRIPTION --------------------------------------------------
 
-with st.expander('About', xs_data is None):
+with st.expander('About', xs_data[0] is None):
     st.info("""*Pears* is a web app to easily fit time-resolved photoluminescence (TRPL) data of perovskite materials.
 Two models can be used, which are extensively discussed [here](https://doi.org/10.1039/D0CP04950F).
 - The Bimolecular-Trapping model considers assumes no doping and that the trap states remain mostly empty over time
@@ -533,6 +541,8 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### April 2022 - V 0.3.1.1
+    * Fixed some bugs that were introduced in the previous update
     #### March 2022 - V 0.3.1
     * Added new "Pre-process" option
     * Files with a header can now be uploaded 
