@@ -345,7 +345,7 @@ class BTModel(Model):
         units = {'k_B': 'cm3/ns', 'k_T': 'ns-1', 'k_A': 'cm6/ns-1'}
         units_html = {'k_B': 'cm<sup>3</sup>/ns', 'k_T': 'ns<sup>-1</sup>', 'k_A': 'cm<sup>6</sup>/ns'}
         factors = {'k_B': 1e-20, 'k_T': 1e-3, 'k_A': 1e-40}
-        fvalues = {'k_T': None, 'k_B': None, 'k_A': None}
+        fvalues = {'k_T': None, 'k_B': None, 'k_A': 0.}
         gvalues = {'k_T': 0.001, 'k_B': 1e-20, 'k_A': 1e-40}
         gvalues_range = {'k_B': [1e-20, 1e-18], 'k_T': [1e-4, 1e-2], 'k_A': [1e-32, 1e-30]}
         n_keys = ('n',)

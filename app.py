@@ -98,8 +98,13 @@ xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
         # Find data index and load the data
-        index = utils.get_data_index(input_filename.getvalue().split(), data_delimiter)
+        print('here')
+        print(input_filename.getvalue())
+        index = utils.get_data_index(input_filename.getvalue().decode('ascii').split(), data_delimiter)
+
+        print(index)
         data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
+        print(data)
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
@@ -541,6 +546,9 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### May 2022 - V 0.3.1.2
+    * The Auger rate constant is now fixed to 0 by default.
+    * Fixed a bug during which data could not be successfully loaded
     #### April 2022 - V 0.3.1.1
     * Fixed some bugs that were introduced in the previous update
     #### March 2022 - V 0.3.1
