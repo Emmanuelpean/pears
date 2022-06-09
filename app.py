@@ -98,13 +98,8 @@ xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
         # Find data index and load the data
-        print('here')
-        print(input_filename.getvalue())
         index = utils.get_data_index(input_filename.getvalue().decode('ascii').split(), data_delimiter)
-
-        print(index)
         data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
-        print(data)
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
@@ -170,7 +165,7 @@ if xs_data[0] is not None:
 
 model, model_name = None, ''
 if N0s is not None:
-    model_help = 'Choose the model to use between the Bimolecular-Trapping and the Bimolecular-Trapping-Detrapping models.'
+    model_help = 'Choose the model to use between the Bimolecular-Trapping-Auger and the Bimolecular-Trapping-Detrapping models.'
     model_name = st.sidebar.selectbox('Model', list(st.session_state.models), help=model_help, key='model_name_')
     model = st.session_state.models[model_name]
 
@@ -398,7 +393,7 @@ elif xs_data[0] is not None:
 with st.expander('About', xs_data[0] is None):
     st.info("""*Pears* is a web app to easily fit time-resolved photoluminescence (TRPL) data of perovskite materials.
 Two models can be used, which are extensively discussed [here](https://doi.org/10.1039/D0CP04950F).
-- The Bimolecular-Trapping model considers assumes no doping and that the trap states remain mostly empty over time
+- The Bimolecular-Trapping-Auger model considers assumes no doping and that the trap states remain mostly empty over time
 - The Bimolecular-Trapping-Detrapping model considers bimolecular recombination, trapping and detrapping with the presence of doping.\n
 Two modes are available.
 - The "%s" mode can be used to fit experimental data given a set of guess parameters.
