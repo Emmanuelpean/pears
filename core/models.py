@@ -510,7 +510,7 @@ class BTDModel(Model):
         return recs
 
 
-models = {'Bimolecular-Trapping': BTModel(), 'Bimolecular-Trapping-Detrapping': BTDModel()}
+models = {'Bimolecular-Trapping-Auger': BTModel(), 'Bimolecular-Trapping-Detrapping': BTDModel()}
 
 
 if __name__ == '__main__':
