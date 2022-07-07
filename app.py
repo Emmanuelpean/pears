@@ -100,6 +100,7 @@ if input_filename is not None:
         # Find data index and load the data
         index = utils.get_data_index(input_filename.getvalue().decode('ascii').split(), data_delimiter)
         data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
+        data = [f for f in data if not any(np.isnan(f))]
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
