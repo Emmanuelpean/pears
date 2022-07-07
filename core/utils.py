@@ -8,6 +8,39 @@ import streamlit as st
 import base64
 
 
+def stringcolumn_to_array(raw_data, delimiter=None):
+    """ Quickly convert a list of strings to ndarrays
+    :param list of str raw_data: list of strings where each string contains as many numbers as there are columns
+    :param str or None delimiter: delimiter separating two data in the strings
+    :param None, list, tuple, int, np.ndarray usecols: list of 2 integers or int
+
+    Important note: each column must contain the same quantity of data points
+
+    Examples
+    --------
+    >>> stringcolumn_to_array(['1 2', '3 4'])
+    array([[1., 3.],
+           [2., 4.]])
+
+    >>> stringcolumn_to_array(['1,2', '3,4'], ',', [0, 1])
+    array([[1., 3.]])
+
+    >>> stringcolumn_to_array(['1,2,3', '3,4,5'], ',', [1, 3])
+    array([[2., 4.],
+           [3., 5.]])"""
+
+    nb_lines = len(raw_data)
+
+    if delimiter is None:
+        string = '\r\n'.join(raw_data)
+    else:
+        string = delimiter.join(raw_data)
+
+    data_c = np.array(string.split(delimiter), dtype=float)
+
+    return np.transpose(data_c.reshape((nb_lines, -1)))
+
+
 def merge_dicts(*dictionaries):
     """ Merge multiple dictionaries. Last argument can be a boolean determining if the dicts can erase each other's content
 
