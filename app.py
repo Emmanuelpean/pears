@@ -98,10 +98,11 @@ xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
         # Find data index and load the data
-        content = input_filename.getvalue().decode('ascii').split()
+        content = input_filename.getvalue().decode('ascii').splitlines()
+        print(content)
         content = [line.strip(data_delimiter) for line in content]  # remove any extra delimiter on each line
         index = utils.get_data_index(content, data_delimiter)
-        data = utils.stringcolumn_to_array(content, data_delimiter)
+        data = utils.stringcolumn_to_array(content[index:], data_delimiter)
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
