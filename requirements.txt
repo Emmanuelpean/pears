@@ -1,6 +1,6 @@
 plotly==5.9.0
 numpy==1.23.1
 scipy==1.9.0
-streamlit~=1.10.0
+streamlit~=1.11.1
 pandas==1.4.3
 hiplot~=0.1.31rc177

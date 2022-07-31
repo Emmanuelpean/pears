@@ -509,18 +509,20 @@ with st.expander('Model & computational details'):
 
 with st.expander('Getting started'):
     st.markdown("""#### Example""")
-    data1_link = utils.generate_downloadlink(resources.BT_TRPL_np, text='data set 1')
-    data2_link = utils.generate_downloadlink(resources.BTD_TRPL_p, text='data set 2')
+    data1_link = utils.generate_downloadlink(resources.BT_TRPL_np, text='TRPL data set 1')
+    data2_link = utils.generate_downloadlink(resources.BTD_TRPL_p, text='TRPL data set 2')
+    data3_link = utils.generate_downloadlink(resources.BTD_TRMC, text='TRMC data set 3')
     st.markdown("""Follow these steps to fit TRPL decays.""")
-    st.markdown("""1. Upload your data and select the data format (text files and csv are supported). 
+    st.markdown("""1. Upload your data and select the data format (tab/space here). Select whether TRPL or TRMC is analysed.
     Check the "Pre-process data" box for PEARS to shift the decay(s) and normalise it (the later is done only for TRPL data);
     * _e.g._ %s, 
-    * _e.g._ %s""" % (data1_link, data2_link), unsafe_allow_html=True)
+    * _e.g._ %s
+    * _.e.g_ %s""" % (data1_link, data2_link, data3_link), unsafe_allow_html=True)
 
-    st.markdown("""2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL intensity 
+    st.markdown("""2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL/TRMC decay 
     measured (separated by a comma);
     * _e.g._: 5.58e15, 1.00e16, 2.23e16 (data set 1)
-    * _e.g._: 55e12, 164e12, 511e12, 1720e12, 4750e12 (data set 2)""", unsafe_allow_html=True)
+    * _e.g._: 55e12, 164e12, 511e12, 1720e12, 4750e12 (data set 2 & 3)""", unsafe_allow_html=True)
 
     st.markdown("""3. Choose a fitting model;""")
 
