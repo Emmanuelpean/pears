@@ -517,7 +517,7 @@ with st.expander('Getting started'):
     Check the "Pre-process data" box for PEARS to shift the decay(s) and normalise it (the later is done only for TRPL data);
     * _e.g._ %s, 
     * _e.g._ %s
-    * _.e.g_ %s""" % (data1_link, data2_link, data3_link), unsafe_allow_html=True)
+    * _e.g._ %s""" % (data1_link, data2_link, data3_link), unsafe_allow_html=True)
 
     st.markdown("""2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL/TRMC decay 
     measured (separated by a comma);

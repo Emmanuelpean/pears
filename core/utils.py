@@ -178,12 +178,12 @@ def matrix_to_string(arrays, header=None):
     >>> arrays1 = [np.array([1.2, 2, 5]), np.array([1.6, 2])]
     >>> header1 = ['A', 'B']
     >>> matrix_to_string(arrays1, header1)
-    'A,B\n1.20000E+00,1.60000E+00,\n2.00000E+00,2.00000E+00,\n5.00000E+00,,'  # will thrown an error due to \n
+    'A\tB\n1.20000E+00\t1.60000E+00\t\n2.00000E+00\t2.00000E+00\t\n5.00000E+00\t\t'  # will thrown an error due to \n
     """
 
     n = np.max([len(array) for array in arrays])
     rows = []
-    delimiter = ','
+    delimiter = '\t'
     for i in range(n):
         row = ''
         for array in arrays:
