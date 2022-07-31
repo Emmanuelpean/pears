@@ -11,8 +11,8 @@ from core import fitting
 class Model(object):
     """ Parent Class for the charge carrier recombination models """
 
-    def __init__(self, ids, units, units_html, factors, fvalues, gvalues, gvalues_range, n_keys, n_init, conc_ca_ids,
-                 param_filters):
+    def __init__(self, ids, units, units_html, factors, fvalues, gvalues, gvalues_range, n_keys, n_init,
+                 conc_ca_ids, param_filters):
         """ Object constructor
         :param list ids: parameter ids
         :param dict units: parameter units
@@ -20,11 +20,14 @@ class Model(object):
         :param dict factors: parameter factors
         :param dict fvalues: parameter fixed values
         :param dict gvalues: parameter guess values
-        :param dict gvalues_range: parameter guess values range """
+        :param dict gvalues_range: parameter guess values range
+        :param n_keys: concentration keys
+        :param n_init: function calculating the initial carrier concentration
+        :param conc_ca_ids: list of keys of concentrations used to determine pulse stabilisation
+        :param param_filters: parameter relations used to filter the guess parameters combinations """
 
         self.s_display_keys = ids.copy()  # single value display keys
         self.m_display_keys = ['y_0', 'I']  # multiple values display keys
-        self.ids = ids + ['y_0', 'I']
         self.units = utils.merge_dicts(units, {'y_0': '', 'I': ''})
         self.units_html = utils.merge_dicts(units_html, {'y_0': '', 'I': ''})
         self.factors = utils.merge_dicts(factors, {'y_0': 1., 'I': 1})
@@ -32,6 +35,8 @@ class Model(object):
         self.gvalues = utils.merge_dicts(gvalues, {'y_0': 0., 'I': 1.})
         self.gvalues_range = utils.merge_dicts(gvalues_range, {'y_0': [0.], 'I': [1.]})
         self.detached_parameters = ['y_0', 'I']
+        self.ids = ids
+
         self.n_keys = n_keys
         self.n_init = n_init
         self.conc_ca_ids = conc_ca_ids
@@ -41,14 +46,16 @@ class Model(object):
         self.quantities = {'k_B': 'Bimolecular recombination rate constant', 'k_T': 'Trapping rate constant',
                            'k_D': 'Detrapping rate constant', 'k_A': 'Auger recombination rate constant',
                            'N_T': 'Trap state concentration', 'p_0': 'Doping concentration', 'y_0': 'Intensity offset',
-                           'I': 'Intensity factor'}
+                           'I': 'Intensity factor', 'mu': 'Carrier mobility', 'mu_e': 'Electron mobility',
+                           'mu_h': 'Hole mobility'}
 
         # Symbols display
         self.symbols = {'k_B': 'k_B', 'k_T': 'k_T', 'k_D': 'k_D', 'k_A': 'k_A', 'N_T': 'N_T', 'p_0': 'p_0',
-                        'y_0': 'y_0', 'I': 'I_0'}
+                        'y_0': 'y_0', 'I': 'I_0', 'mu': 'mu', 'mu_e': 'mu_e', 'mu_h': 'mu_h'}
         self.symbols_html = {'N_T': 'N<sub>T</sub>', 'p_0': 'p<sub>0</sub>', 'k_B': 'k<sub>B</sub>',
-                             'k_T': 'k<sub>T</sub>',
-                             'k_D': 'k<sub>D</sub>', 'k_A': 'k<sub>A</sub>', 'y_0': 'y<sub>0</sub>', 'I': 'I<sub>0</sub>'}
+                             'k_T': 'k<sub>T</sub>', 'k_D': 'k<sub>D</sub>', 'k_A': 'k<sub>A</sub>',
+                             'y_0': 'y<sub>0</sub>', 'I': 'I<sub>0</sub>', 'mu': '&mu;', 'mu_e': '&mu;<sub>e</sub>',
+                             'mu_h': '&mu;<sub>h</sub>'}
 
         self.labels = {pkey: self.get_parameter_label(self.symbols[pkey], self.units[pkey]) for pkey in
                        self.ids}  # symbol + unit
@@ -65,7 +72,8 @@ class Model(object):
     def __eq__(self, other):
         """ self == other """
 
-        if self.fvalues == other.fvalues and self.gvalues == other.gvalues and self.gvalues_range == other.gvalues_range:
+        if self.fvalues == other.fvalues and self.gvalues == other.gvalues and self.gvalues_range == other.gvalues_range \
+                and self.__class__ == other.__class__:
             return True
         else:
             return False
@@ -104,8 +112,8 @@ class Model(object):
 
         Example
         -------
-        >>> _ = BTModel().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40)
-        >>> _ = BTModel().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40, p=1000)
+        >>> _ = BTModelTRPL().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40)
+        >>> _ = BTModelTRPL().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40, p=1000)
         >>> len(_['n'])
         5"""
 
@@ -135,7 +143,7 @@ class Model(object):
 
         return variables
 
-    def calculate_trpl(self, *args, **kwargs):
+    def calculate_fit_quantity(self, *args, **kwargs):
         """ Calculate the TRPL """
 
         return np.array([0])
@@ -148,6 +156,7 @@ class Model(object):
     # ------------------------------------------------- FITTING METHODS ------------------------------------------------
 
     def fit(self, xs_data, ys_data, N0s, p0=None):
+        # noinspection PyUnresolvedReferences
         """ Fit the data using the model
         :param list, np.ndarray xs_data: list-like of x data
         :param list, np.ndarray ys_data: list-like of y data
@@ -158,11 +167,20 @@ class Model(object):
         -------
         >>> from core import models
         >>> from core import resources
-        >>> x_data1 = resources.test_file1[0]
-        >>> ys_data1 = resources.test_file1[1:]
+
+        >>> x_data1 = resources.BTD_TRPL_p[0]
+        >>> ys_data1 = resources.BTD_TRPL_p[1:]
         >>> xs_data1 = [x_data1] * len(ys_data1)
-        >>> N0s1 = [1e15, 1e16, 1e17]
-        >>> fit1 = BTModel().fit(xs_data1, ys_data1, N0s1) """
+        >>> N0s1 = [0.51e14, 1.61e14, 4.75e14, 16.1e14, 43.8e14]
+        >>> fit1 = BTDModelTRPL().fit(xs_data1, ys_data1, N0s1)
+        >>> print({key_: val for key_, val in fit1['popts'][0].items() if key_ in ('k_B', 'k_T', 'N_T')})
+        {'k_B': 2.78779953631183e-19, 'k_T': 1.1685297412688705e-16, 'N_T': 58465425942101.34}
+
+        >>> x_data2, ys_data2 = resources.BTD_TRMC_perfect[0], resources.BTD_TRMC_perfect[1:]
+        >>> N0s2 = [0.51e14, 1.61e14, 4.75e14, 16.1e14, 43.8e14]
+        >>> fit2 = BTDModelTRMC().fit([x_data2] * len(ys_data2), ys_data2, N0s2)
+        >>> print({key_: val for key_, val in fit2['popts'][0].items() if key_ in ('k_B', 'k_T', 'N_T')})
+        {'k_B': 7.595299831935531e-20, 'k_T': 1.1999999865616024e-16, 'N_T': 55000002451765.664}"""
 
         # Input parameters processing
         fparams = [utils.merge_dicts(self.fixed_values, dict(N_0=n0)) for n0 in N0s]  # add N0 to fixed parameters
@@ -170,7 +188,7 @@ class Model(object):
             p0 = self.gvalues
 
         # Fitting
-        fit = fitting.Fit(xs_data, ys_data, self.calculate_trpl, p0, self.detached_parameters, fparams)
+        fit = fitting.Fit(xs_data, ys_data, self.calculate_fit_quantity, p0, self.detached_parameters, fparams)
 
         # Popts, fitted data, R2
         popts = fit.fit()
@@ -181,12 +199,12 @@ class Model(object):
 
         # Popts full labels
         labels = []
-        for key in self.s_display_keys + self.m_display_keys:
+        for key in self.ids:
             fstring = ' (fixed)' if key in fparams[0] else ''  # add 'fixed' if parameter is fixed
             if key in self.s_display_keys:
                 data = popts[0][key] / self.factors[key]
                 label = self.quantities[key] + ' (' + self.symbols_html[key] + '): ' + '%.5f' % data + ' &#10005; ' \
-                             + self.factors_html[key] + ' ' + self.units_html[key] + fstring
+                        + self.factors_html[key] + ' ' + self.units_html[key] + fstring
             else:
                 data = ['%.5f' % popt[key] for popt in popts]
                 label = self.quantities[key] + ' (' + self.symbols_html[key] + '): ' + ', '.join(data) + fstring
@@ -198,7 +216,8 @@ class Model(object):
         for x_data, p in zip(xs_data, popts):
             concentration = {key: value[0] for key, value in self.calculate_concentrations(x_data, **p).items()}
             kwargs = utils.merge_dicts(p, concentration)
-            contributions.append({self.cbt_labels[key]: value for key, value in self.calculate_contributions(x_data, **kwargs).items()})
+            contributions.append(
+                {self.cbt_labels[key]: value for key, value in self.calculate_contributions(x_data, **kwargs).items()})
         contributions = utils.list_to_dict(contributions)
 
         # All values (guess, optimised, R2 and contributions)
@@ -229,41 +248,32 @@ class Model(object):
 
         Example
         -------
-        >>> from core import models
-        >>> from core import resources
-        >>> x_data1 = resources.test_file1[0]
-        >>> ys_data1 = resources.test_file1[1:]
-        >>> xs_data1 = [x_data1] * len(ys_data1)
-        >>> N0s1 = [1e15, 1e16, 1e17]
-        >>> fit1 = BTModel().fit(xs_data1, ys_data1, N0s1)
-        >>> list(BTModel().get_carrier_accumulation(fit1['popts'], fit1['N0s'], 1000).values())
-        [0.02057525783717984, 0.12353636524250478, 0.11835604643279929]"""
+        >>> popts_ = [{'k_T': 15e-3, 'k_B': 30e-20, 'mu': 10.0, 'k_A': 0.0, 'y_0': 0.0, 'I': 1.0, 'N_0': 1e+17}]
+        >>> list(BTModelTRPL().get_carrier_accumulation(popts_, [1e17], 100).values())
+        [1.7319583560189977]"""
 
         labels = utils.get_power_labels(N0s)
         nca = dict()
         for label, popt, key in zip(labels, popts, N0s):
             x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
-            pulse1 = self.calculate_trpl(x, **popt)
-            pulse2 = self.calculate_trpl(x, p=1000, **popt)
+            pulse1 = self.calculate_fit_quantity(x, **popt)
+            pulse2 = self.calculate_fit_quantity(x, p=1000, **popt)
             nca[label] = np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100
         return nca
 
     def get_carrier_concentrations(self, xs_data, popts, period):
         """ Calculate the carrier concentrations from the optimised parameters
-        :param list xs_data: x axis data
+        :param list xs_data: x-axis data
         :param list popts: list of optimised parameters
         :param float, int period: excitation repetition period in ns
 
         Example
         -------
-        >>> from core import models
-        >>> from core import resources
-        >>> x_data1 = resources.test_file1[0]
-        >>> ys_data1 = resources.test_file1[1:]
-        >>> xs_data1 = [x_data1] * len(ys_data1)
-        >>> N0s1 = [1e15, 1e16, 1e17]
-        >>> fit1 = BTModel().fit(xs_data1, ys_data1, N0s1)
-        >>> _ = BTModel().get_carrier_concentrations(xs_data1, fit1['popts'], 1000.) """
+        >>> x_data1 = [np.linspace(0, 1000, 10001)]
+        >>> popts_ = [{'k_T': 15e-3, 'k_B': 30e-20, 'mu': 10.0, 'k_A': 0.0, 'y_0': 0.0, 'I': 1.0, 'N_0': 1e+17}]
+        >>> _ = BTModelTRPL().get_carrier_concentrations(x_data1, popts_, 1000.)
+        >>> print(_[-1][0]['n'][100])
+        8737388479621619.0"""
 
         # Carrier concentrations
         if period == '':
@@ -292,11 +302,13 @@ class Model(object):
 
         >>> from core import models
         >>> from core import resources
-        >>> x_data1 = resources.test_file1[0]
-        >>> ys_data1 = resources.test_file1[1:]
+        >>> x_data1 = resources.BT_TRPL_p[0]
+        >>> ys_data1 = resources.BT_TRPL_p[1:]
         >>> xs_data1 = [x_data1] * len(ys_data1)
         >>> N0s1 = [1e15, 1e16, 1e17]
-        >>> analysis = BTModel().grid_fitting(None, N0s1, xs_data=xs_data1, ys_data=ys_data1) """
+        >>> analysis = BTModelTRPL().grid_fitting(None, N0s1, xs_data=xs_data1, ys_data=ys_data1)
+        >>> print(analysis[0]['popt'])
+        {'k_B': 1.3160102179727553e-19, 'k_T': 0.0048083643556190514, 'k_A': 0.0}"""
 
         # Filter out the fixed parameters
         p0s = {key: self.gvalues_range[key] for key in self.gvalues_range if key not in self.fixed_values}
@@ -335,40 +347,28 @@ class Model(object):
         return string
 
 
+# ------------------------------------------------------ BT MODEL ------------------------------------------------------
+
+
 class BTModel(Model):
     """ Class for the Bimolecular-Trapping model """
 
-    def __init__(self):
+    def __init__(self, ids):
         """ Object constructor """
 
-        ids = ['k_T', 'k_B', 'k_A']
-        units = {'k_B': 'cm3/ns', 'k_T': 'ns-1', 'k_A': 'cm6/ns-1'}
-        units_html = {'k_B': 'cm<sup>3</sup>/ns', 'k_T': 'ns<sup>-1</sup>', 'k_A': 'cm<sup>6</sup>/ns'}
-        factors = {'k_B': 1e-20, 'k_T': 1e-3, 'k_A': 1e-40}
-        fvalues = {'k_T': None, 'k_B': None, 'k_A': 0.}
-        gvalues = {'k_T': 0.001, 'k_B': 1e-20, 'k_A': 1e-40}
-        gvalues_range = {'k_B': [1e-20, 1e-18], 'k_T': [1e-4, 1e-2], 'k_A': [1e-32, 1e-30]}
+        units = {'k_B': 'cm3/ns', 'k_T': 'ns-1', 'k_A': 'cm6/ns-1', 'mu': 'cm^2/(V s)'}
+        units_html = {'k_B': 'cm<sup>3</sup>/ns', 'k_T': 'ns<sup>-1</sup>', 'k_A': 'cm<sup>6</sup>/ns',
+                      'mu': 'cm<sup>2</sup>/(V s)'}
+        factors = {'k_B': 1e-20, 'k_T': 1e-3, 'k_A': 1e-40, 'mu': 1}
+        fvalues = {'k_T': None, 'k_B': None, 'k_A': 0., 'mu': None}
+        gvalues = {'k_T': 0.001, 'k_B': 1e-20, 'k_A': 1e-40, 'mu': 10}
+        gvalues_range = {'k_B': [1e-20, 1e-18], 'k_T': [1e-4, 1e-2], 'k_A': [1e-32, 1e-30], 'mu': [1, 10]}
         n_keys = ('n',)
         n_init = lambda N_0: {'n': N_0}
         conc_ca_ids = ('n',)
 
         Model.__init__(self, ids, units, units_html, factors, fvalues, gvalues, gvalues_range, n_keys, n_init,
                        conc_ca_ids, [])
-
-    @staticmethod
-    def calculate_contributions(t, k_T, k_B, k_A, n, **kwargs):
-        """ Calculate the total contributions to the TRPL
-        :param k_T: trapping rate constant (ns-1)
-        :param k_B: bimolecular rate constant (cm3/ns)
-        :param k_A: Auger rate constant (cm6/ns)
-        :param n: carrier concentration (cm-3)
-        :param t: time (ns)"""
-
-        T = sci.trapz(k_T * n ** 2, t)
-        B = sci.trapz(k_B * n ** 3, t)
-        A = sci.trapz(k_A * n ** 4, t)
-        S = T + B + A
-        return {'T': T / S * 100, 'B': B / S * 100, 'A': A / S * 100}
 
     @staticmethod
     def rate_equations(n, k_T, k_B, k_A, **kwargs):
@@ -379,23 +379,6 @@ class BTModel(Model):
         :param k_A: Auger recombination rate (cm6/ns) """
 
         return {'n': - k_T * n - k_B * n ** 2 - k_A * n ** 3}
-
-    def calculate_trpl(self, t, N_0, I, y_0, **kwargs):
-        """ Calculate the normalised TRPL intensity using the BT model
-        :param t: time (ns)
-        :param N_0: initial carrier concentration
-        :param y_0: background intensity
-        :param I: amplitude factor
-        :param kwargs: keyword arguments passed to the calculate_concentrations function
-
-        Examples
-        --------
-        >>> _ = BTModel().calculate_trpl(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=1e-3, k_A=1e-40, I=1, y_0=0)
-        >>> _ = BTModel().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40, p=1000)"""
-
-        n = self.calculate_concentrations(t, N_0, **kwargs)['n'][-1]
-        I_TRPL = n ** 2 / N_0
-        return I * I_TRPL / I_TRPL[0] + y_0
 
     def get_recommendations(self, contributions, threshold=10):
         """ Get recommendations for the contributions """
@@ -412,44 +395,99 @@ class BTModel(Model):
         return recs
 
 
+class BTModelTRPL(BTModel):
+
+    def __init__(self):
+        BTModel.__init__(self, ['k_T', 'k_B', 'k_A', 'y_0', 'I'])
+
+    def calculate_fit_quantity(self, t, N_0, I, y_0, **kwargs):
+        """ Calculate the normalised TRPL intensity using the BT model
+        :param t: time (ns)
+        :param N_0: initial carrier concentration
+        :param y_0: background intensity
+        :param I: amplitude factor
+        :param kwargs: keyword arguments passed to the calculate_concentrations function
+
+        Examples
+        --------
+        >>> _ = BTModelTRPL().calculate_fit_quantity(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=1e-3, k_A=1e-40, I=1, y_0=0)
+        >>> _ = BTModelTRPL().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40, p=1000) """
+
+        n = self.calculate_concentrations(t, N_0, **kwargs)['n'][-1]
+        I_TRPL = n ** 2 / N_0
+        return I * I_TRPL / I_TRPL[0] + y_0
+
+    @staticmethod
+    def calculate_contributions(t, k_T, k_B, k_A, n, **kwargs):
+        """ Calculate the total contributions to the TRPL
+        :param k_T: trapping rate constant (ns-1)
+        :param k_B: bimolecular rate constant (cm3/ns)
+        :param k_A: Auger rate constant (cm6/ns)
+        :param n: carrier concentration (cm-3)
+        :param t: time (ns)"""
+
+        T = sci.trapz(k_T * n ** 2, t)
+        B = sci.trapz(k_B * n ** 3, t)
+        A = sci.trapz(k_A * n ** 4, t)
+        S = T + B + A
+        return {'T': T / S * 100, 'B': B / S * 100, 'A': A / S * 100}
+
+
+class BTModelTRMC(BTModel):
+
+    def __init__(self):
+        BTModel.__init__(self, ['k_T', 'k_B', 'k_A', 'mu', 'y_0'])
+
+    def calculate_fit_quantity(self, t, N_0, mu, y_0, **kwargs):
+        """ Calculate the TRMC intensity
+
+        >>> _ = BTModelTRMC().calculate_fit_quantity(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=1e-3, k_A=1e-40, I=1, y_0=0, mu=10)
+        >>> _ = BTModelTRMC().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=1e-3, k_A=1e-40, p=1000, mu=10) """
+
+        n = self.calculate_concentrations(t, N_0, **kwargs)['n'][-1]
+        return (2 * mu * n) / N_0 + y_0
+
+    @staticmethod
+    def calculate_contributions(t, k_T, k_B, k_A, mu, n, **kwargs):
+        """ Calculate the total contributions to the TRPL
+        :param k_T: trapping rate constant (ns-1)
+        :param k_B: bimolecular rate constant (cm3/ns)
+        :param k_A: Auger rate constant (cm6/ns)
+        :param mu: carrier mobility (cm2/Vs)
+        :param n: carrier concentration (cm-3)
+        :param t: time (ns)"""
+
+        T = sci.trapz(2 * mu * k_T * n, t)
+        B = sci.trapz(2 * mu * k_B * n ** 2, t)
+        A = sci.trapz(2 * mu * k_A * n ** 3, t)
+        S = T + B + A
+        return {'T': T / S * 100, 'B': B / S * 100, 'A': A / S * 100}
+
+
+# ------------------------------------------------------ BTD MODEL -----------------------------------------------------
+
+
 class BTDModel(Model):
     """ Class for the Bimolecular-Trapping-Detrapping model """
 
-    def __init__(self):
-        ids = ['k_B', 'k_T', 'k_D', 'N_T', 'p_0']
-        units = {'N_T': 'cm-3', 'p_0': 'cm-3', 'k_B': 'cm3/ns', 'k_T': 'cm3/ns', 'k_D': 'cm3/ns'}
+    def __init__(self, ids):
+
+        units = {'N_T': 'cm-3', 'p_0': 'cm-3', 'k_B': 'cm3/ns', 'k_T': 'cm3/ns', 'k_D': 'cm3/ns', 'mu_e': 'cm^2/(V s)',
+                 'mu_h': 'cm^2/(V s)'}
         units_html = {'N_T': 'cm<sup>-3</sup>', 'p_0': 'cm<sup>-3</sup>', 'k_B': 'cm<sup>3</sup>/ns',
-                      'k_T': 'cm<sup>3</sup>/ns', 'k_D': 'cm<sup>3</sup>/ns'}
-        factors = {'k_B': 1e-20, 'k_T': 1e-20, 'k_D': 1e-20, 'p_0': 1e12, 'N_T': 1e12}
-        fvalues = {'k_T': None, 'k_B': None, 'k_D': None, 'N_T': None, 'p_0': None}
-        gvalues = {'k_B': 30e-20, 'k_T': 12000e-20, 'k_D': 80e-20, 'N_T': 60e12, 'p_0': 65e12}
+                      'k_T': 'cm<sup>3</sup>/ns',
+                      'k_D': 'cm<sup>3</sup>/ns', 'mu_e': 'cm<sup>2</sup>/(V s)', 'mu_h': 'cm<sup>2</sup>/(V s)'}
+        factors = {'k_B': 1e-20, 'k_T': 1e-20, 'k_D': 1e-20, 'p_0': 1e12, 'N_T': 1e12, 'mu_e': 1, 'mu_h': 1}
+        fvalues = {'k_T': None, 'k_B': None, 'k_D': None, 'N_T': None, 'p_0': None, 'mu_e': None, 'mu_h': None}
+        gvalues = {'k_B': 30e-20, 'k_T': 12000e-20, 'k_D': 80e-20, 'N_T': 60e12, 'p_0': 65e12, 'mu_e': 10, 'mu_h': 10}
         gvalues_range = {'k_B': [1e-20, 1e-18], 'k_T': [1e-18, 1e-16], 'k_D': [1e-20, 1e-18], 'p_0': [1e12, 1e14],
-                         'N_T': [1e12, 1e14]}
+                         'N_T': [1e12, 1e14], 'mu_e': [1, 10], 'mu_h': [1, 10]}
         n_keys = ('n_e', 'n_t', 'n_h')  # need to be ordered same way as rate_equations input
         n_init = lambda N_0: {'n_e': N_0, 'n_t': 0, 'n_h': N_0}
         conc_ca_ids = ('n_e', 'n_h')
 
         Model.__init__(self, ids, units, units_html, factors, fvalues, gvalues, gvalues_range, n_keys, n_init,
                        conc_ca_ids, ['k_B < k_T', 'k_D < k_T'])
-
-    @staticmethod
-    def calculate_contributions(t, k_T, k_B, k_D, N_T, p_0, n_e, n_t, n_h, **kwargs):
-        """ Calculate the total contributions to the TRPL
-        :param k_T: trapping rate constant (cm3/ns)
-        :param k_B: bimolecular rate constant (cm3/ns)
-        :param k_D: Auger detrapping rate constant (cm3/ns)
-        :param N_T: trap state concentration (cm-3)
-        :param p_0: doping concentration (cm-3)
-        :param n_e: electron concentration (cm-3)
-        :param n_t: trapped electron concentration (cm-3)
-        :param n_h: hole concentration (cm-3)
-        :param t: time (ns)"""
-
-        T = sci.trapz(k_T * n_e * (N_T - n_t) * (n_h + p_0), t)
-        B = sci.trapz(k_B * n_e * (n_h + p_0) * (n_e + n_h + p_0), t)
-        D = sci.trapz(k_D * n_t * (n_h + p_0) * n_e, t)
-        S = T + B + D
-        return {'T': T / S * 100, 'B': B / S * 100, 'D': D / S * 100}
 
     @staticmethod
     def rate_equations(n_e, n_t, n_h, k_B, k_T, k_D, p_0, N_T, **kwargs):
@@ -471,26 +509,6 @@ class BTDModel(Model):
         dnh_dt = - B - D
         return {'n_e': dne_dt, 'n_t': dnt_dt, 'n_h': dnh_dt}
 
-    def calculate_trpl(self, t, N_0, I, y_0, p_0, **kwargs):
-        """ Calculate the normalised TRPL intensity
-        :param t: time (ns)
-        :param N_0: initial carrier concentration (cm-3)
-        :param y_0: background intensity
-        :param p_0: doping concentration (cm-3)
-        :param I: amplitude factor
-        :param kwargs: keyword arguments passed to the calculate_concentrations function
-
-        Examples
-        --------
-        >>> _ = BTDModel().calculate_trpl(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=12000e-20, N_T=60e12,
-        ...     p_0=65e12, k_D=80e-20, I=1, y_0=0)
-        >>> _ = BTDModel().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=12000e-20, N_T=60e12,
-        ...     p_0=65e12, k_D=80e-20, p=1000) """
-
-        n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
-        I_TRPL = n['n_e'][-1] * (n['n_h'][-1] + p_0) / N_0
-        return I * I_TRPL / I_TRPL[0] + y_0
-
     def get_recommendations(self, contributions, threshold=10):
         """ Get recommendations for the contributions """
 
@@ -510,9 +528,103 @@ class BTDModel(Model):
         return recs
 
 
-models = {'Bimolecular-Trapping-Auger': BTModel(), 'Bimolecular-Trapping-Detrapping': BTDModel()}
+class BTDModelTRPL(BTDModel):
+
+    def __init__(self):
+        BTDModel.__init__(self, ['k_B', 'k_T', 'k_D', 'N_T', 'p_0', 'y_0', 'I'])
+
+    def calculate_fit_quantity(self, t, N_0, I, y_0, p_0, **kwargs):
+        """ Calculate the normalised TRPL intensity
+        :param t: time (ns)
+        :param N_0: initial carrier concentration (cm-3)
+        :param y_0: background intensity
+        :param p_0: doping concentration (cm-3)
+        :param I: amplitude factor
+        :param kwargs: keyword arguments passed to the calculate_concentrations function
+
+        Examples
+        --------
+        >>> _ = BTDModelTRPL().calculate_fit_quantity(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=12000e-20, N_T=60e12,
+        ...     p_0=65e12, k_D=80e-20, I=1, y_0=0)
+        >>> _ = BTDModelTRPL().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=12000e-20, N_T=60e12,
+        ...     p_0=65e12, k_D=80e-20, p=1000) """
+
+        n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
+        I_TRPL = n['n_e'][-1] * (n['n_h'][-1] + p_0) / N_0
+        return I * I_TRPL / I_TRPL[0] + y_0
+
+    @staticmethod
+    def calculate_contributions(t, k_T, k_B, k_D, N_T, p_0, n_e, n_t, n_h, **kwargs):
+        """ Calculate the total contributions to the TRPL
+        :param k_T: trapping rate constant (cm3/ns)
+        :param k_B: bimolecular rate constant (cm3/ns)
+        :param k_D: Auger detrapping rate constant (cm3/ns)
+        :param N_T: trap state concentration (cm-3)
+        :param p_0: doping concentration (cm-3)
+        :param n_e: electron concentration (cm-3)
+        :param n_t: trapped electron concentration (cm-3)
+        :param n_h: hole concentration (cm-3)
+        :param t: time (ns)"""
+
+        T = sci.trapz(k_T * n_e * (N_T - n_t) * (n_h + p_0), t)
+        B = sci.trapz(k_B * n_e * (n_h + p_0) * (n_e + n_h + p_0), t)
+        D = sci.trapz(k_D * n_t * (n_h + p_0) * n_e, t)
+        S = T + B + D
+        return {'T': T / S * 100, 'B': B / S * 100, 'D': D / S * 100}
+
+
+class BTDModelTRMC(BTDModel):
+
+    def __init__(self):
+        BTDModel.__init__(self, ['k_B', 'k_T', 'k_D', 'N_T', 'p_0', 'mu_e', 'mu_h', 'y_0'])
+
+    def calculate_fit_quantity(self, t, N_0, mu_e, mu_h, y_0, p_0, **kwargs):
+        """ Calculate the normalised TRPL intensity
+        :param t: time (ns)
+        :param N_0: initial carrier concentration (cm-3)
+        :param y_0: background intensity
+        :param p_0: doping concentration (cm-3)
+        :param mu_e: electron mobility (cm2/Vs)
+        :param mu_h: hole mobility (cm2/Vs)
+        :param kwargs: keyword arguments passed to the calculate_concentrations function
+
+        Examples
+        --------
+        >>> _ = BTDModelTRMC().calculate_fit_quantity(np.linspace(0, 100), N_0=1e17, p=1, k_B=50e-20, k_T=12000e-20, N_T=60e12,
+        ...     p_0=65e12, k_D=80e-20, mu_e=10, mu_h=20, y_0=0)
+        >>> _ = BTDModelTRMC().calculate_concentrations(np.linspace(0, 100), N_0=1e17, k_B=50e-20, k_T=12000e-20, N_T=60e12,
+        ...     p_0=65e12, k_D=80e-20, mu_e=10, mu_h=20, p=1000) """
+
+        n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
+        return (mu_e * n['n_e'][-1] + mu_h * n['n_h'][-1]) / N_0
+
+    @staticmethod
+    def calculate_contributions(t, k_T, k_B, k_D, N_T, p_0, n_e, n_t, n_h, mu_e, mu_h, **kwargs):
+        """ Calculate the total contributions to the TRPL
+        :param k_T: trapping rate constant (cm3/ns)
+        :param k_B: bimolecular rate constant (cm3/ns)
+        :param k_D: Auger detrapping rate constant (cm3/ns)
+        :param N_T: trap state concentration (cm-3)
+        :param p_0: doping concentration (cm-3)
+        :param n_e: electron concentration (cm-3)
+        :param n_t: trapped electron concentration (cm-3)
+        :param n_h: hole concentration (cm-3)
+        :param mu_e: electron mobility (cm2/Vs)
+        :param mu_h: hole mobility (cm2/Vs)
+        :param t: time (ns)"""
+
+        T = sci.trapz(k_T * n_e * (N_T - n_t) * mu_e, t)
+        B = sci.trapz(k_B * n_e * (n_h + p_0) * (mu_e + mu_h), t)
+        D = sci.trapz(k_D * n_t * (n_h + p_0) * mu_h, t)
+        S = T + B + D
+        return {'T': T / S * 100, 'B': B / S * 100, 'D': D / S * 100}
+
+
+models = {'Bimolecular-Trapping-Auger': {'TRPL': BTModelTRPL(), 'TRMC': BTModelTRMC()},
+          'Bimolecular-Trapping-Detrapping': {'TRPL': BTDModelTRPL(), 'TRMC': BTDModelTRMC()}}
 
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()

@@ -34,11 +34,11 @@ def subplots(n, m=None, **kwargs):
     return ps.make_subplots(rows=nb_rows, cols=nb_cols, **kwargs), positions
 
 
-def plot_fit(xs_data, ys_data, ys_data_fit=None, labels=None):
+def plot_fit(xs_data, ys_data, quantity, ys_data_fit=None, labels=None):
     """ Plot raw data and fit data
-    :param list, np.ndarray xs_data: list of np.ndarray associated with the x axis
-    :param list, np.ndarray ys_data: list of np.ndarray associated with the y axis (raw data)
-    :param list, np.ndarray ys_data_fit: list of np.ndarray associated with the y axis (fit)
+    :param list, np.ndarray xs_data: list of np.ndarray associated with the x-axis
+    :param list, np.ndarray ys_data: list of np.ndarray associated with the y-axis (raw data)
+    :param list, np.ndarray ys_data_fit: list of np.ndarray associated with the y-axis (fit)
     :param list labels: list of labels or floats """
 
     figure = go.Figure()
@@ -48,7 +48,10 @@ def plot_fit(xs_data, ys_data, ys_data_fit=None, labels=None):
             figure.add_trace(go.Scatter(x=xs_data[i], y=ys_data_fit[i], name=labels[i] + ' (fit)',
                                         line=dict(color=COLORS[i], dash='dash')))
     figure.update_xaxes(title_text='Time (ns)', tickformat=',')
-    figure.update_yaxes(title_text='Intensity (a.u.)')
+    if quantity == 'TRPL':
+        figure.update_yaxes(title_text='Intensity (a.u.)')
+    else:
+        figure.update_yaxes(title_text='Intensity (cm<sup>2</sup>/(Vs))')
     return figure
 
 

@@ -4,8 +4,17 @@ from os import path
 basepath = path.dirname(__file__)
 
 # Test files
-test_file1 = np.loadtxt(path.join(basepath, '../resources/data/test_file.txt'), unpack=True)
-test_file2 = np.loadtxt(path.join(basepath, '../resources/data/brenes.txt'), unpack=True)
+BT_TRPL_np_file = path.join(basepath, '../resources/data/BT_TRPL_nonprocessed.txt')
+BT_TRPL_np = np.loadtxt(BT_TRPL_np_file, unpack=True)
+BT_TRPL_p_file = path.join(basepath, '../resources/data/BT_TRPL_processed.txt')
+BT_TRPL_p = np.loadtxt(BT_TRPL_p_file, unpack=True)
+BTD_TRPL_p_file = path.join(basepath, '../resources/data/BTD_TRPL_processed.txt')
+BTD_TRPL_p = np.loadtxt(BTD_TRPL_p_file, unpack=True)
+BTD_TRMC_file = path.join(basepath, '../resources/data/BTD_TRMC.txt')
+BTD_TRMC = np.loadtxt(BTD_TRMC_file, unpack=True, skiprows=1)
+BTD_TRMC_perfect_file = path.join(basepath, '../resources/data/BTD_TRMC_perfect.txt')
+BTD_TRMC_perfect = np.loadtxt(BTD_TRMC_perfect_file, unpack=True, skiprows=1)
+incomplete_file = path.join(basepath, '../resources/data/incomplete_data.csv')
 
 # Images
 logo_text_filename = path.join(basepath, '../resources/medias/logo_text.svg')

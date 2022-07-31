@@ -1,7 +1,7 @@
-""" main scipt
+""" main script
 Important notes:
 - Changing the app mode resets all the results
-- Changing the period changes data associated with the fit
+- Changing the period change data associated with the fit
 - Changing any other value does not re-run the fit but displays a message about it
 - Changing the data loaded resets everything """
 
@@ -88,8 +88,14 @@ data_delimiter = st.sidebar.radio('Data delimiter', ['tab/space', 'comma', 'semi
                                   key='data_delimiter')
 data_delimiter = {'tab/space': None, 'comma': ',', 'semicolon': ';'}[data_delimiter]
 
+# Quantity
+quantity_input = st.sidebar.radio('Quantity', ['TRPL', 'TRMC'], help='Quantity associated with the data', key='quantity_input_')
+
 # Processing data
-preprocess_help = 'Shift the decay maximum intensity to $t=0$ and normalise the intensity.'
+if quantity_input == 'TRPL':
+    preprocess_help = 'Shift the decay maximum intensity to $t=0$ and normalise the intensity.'
+else:
+    preprocess_help = 'Shift the decay maximum intensity to $t=0$.'
 process_input = st.sidebar.checkbox('Pre-process data', help=preprocess_help, key='preprocess_')
 
 # Load the data
@@ -97,22 +103,7 @@ data_message = st.empty()
 xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
-        # Find data index and load the data
-        content = input_filename.getvalue().decode('ascii').splitlines()
-        print(content)
-        content = [line.strip(data_delimiter) for line in content]  # remove any extra delimiter on each line
-        index = utils.get_data_index(content, data_delimiter)
-        data = utils.stringcolumn_to_array(content[index:], data_delimiter)
-
-        # Sort the data
-        if data_format == 'X/Y1/Y2/Y3...':
-            xs_data, ys_data = np.array([data[0]] * (len(data) - 1)), data[1:]
-        else:
-            xs_data, ys_data = data[::2], data[1::2]
-
-        # Check the data
-        xs_data = [x_data[np.invert(np.isnan(x_data))] for x_data in xs_data]
-        ys_data = [y_data[np.invert(np.isnan(y_data))] for y_data in ys_data]
+        xs_data, ys_data = utils.load_data(input_filename.getvalue(), data_delimiter, data_format)
 
         # Check consistency
         if len(xs_data) != len(ys_data):
@@ -123,7 +114,7 @@ if input_filename is not None:
 
         # Process the data
         if process_input:
-            xs_data, ys_data = utils.process_data(xs_data, ys_data)
+            xs_data, ys_data = utils.process_data(xs_data, ys_data, quantity_input)
 
         data_message.success('Data successfully loaded')
 
@@ -170,7 +161,7 @@ model, model_name = None, ''
 if N0s is not None:
     model_help = 'Choose the model to use between the Bimolecular-Trapping-Auger and the Bimolecular-Trapping-Detrapping models.'
     model_name = st.sidebar.selectbox('Model', list(st.session_state.models), help=model_help, key='model_name_')
-    model = st.session_state.models[model_name]
+    model = st.session_state.models[model_name][quantity_input]
 
 # ------------------------------------------------ FIXED & GUESS VALUES ------------------------------------------------
 
@@ -325,7 +316,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
         col1.markdown("""#### TRPL fitting""")
 
         # Plot
-        col1.plotly_chart(plot.plot_fit(fit['xs_data'], fit['ys_data'], fit['fit_ydata'], fit['N0s_labels']), use_container_width=True)
+        col1.plotly_chart(plot.plot_fit(fit['xs_data'], fit['ys_data'], quantity_input, fit['fit_ydata'], fit['N0s_labels']), use_container_width=True)
 
         # Export
         header = np.concatenate([['Time (ns)', 'Intensity %i' % i] for i in range(1, len(ys_data) + 1)])
@@ -385,7 +376,7 @@ elif xs_data[0] is not None:
             labels = utils.get_power_labels(N0s)
         else:
             labels = ['%i' % (i + 1) for i in range(len(ys_data))]
-        st.plotly_chart(plot.plot_fit(xs_data, ys_data, labels=labels), use_container_width=True)
+        st.plotly_chart(plot.plot_fit(xs_data, ys_data, quantity_input, labels=labels), use_container_width=True)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------- GENERAL INFORMATION ------------------------------------------------
@@ -394,16 +385,17 @@ elif xs_data[0] is not None:
 # --------------------------------------------------- APP DESCRIPTION --------------------------------------------------
 
 with st.expander('About', xs_data[0] is None):
-    st.info("""*Pears* is a web app to easily fit time-resolved photoluminescence (TRPL) data of perovskite materials.
-Two models can be used, which are extensively discussed [here](https://doi.org/10.1039/D0CP04950F).
+    st.info("""*Pears* is a web app to easily fit time-resolved photoluminescence (TRPL) and time-resolved microwave 
+photoconductivity (TRMC) data of perovskite materials. Two models can be used, which are extensively discussed for TRPL 
+[here](https://doi.org/10.1039/D0CP04950F).
 - The Bimolecular-Trapping-Auger model considers assumes no doping and that the trap states remain mostly empty over time
 - The Bimolecular-Trapping-Detrapping model considers bimolecular recombination, trapping and detrapping with the presence of doping.\n
 Two modes are available.
 - The "%s" mode can be used to fit experimental data given a set of guess parameters.
-- The "%s" mode runs the fitting optimisation for a range of guess parameters.
-If all the optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple solutions\n
+- The "%s" mode runs the fitting optimisation for a range of guess parameters. If all the optimisations do not converge toward the same values,
+  then the fitting is inaccurate due to the possibility of multiple solutions.x
 App created and maintained by [Emmanuel V. Pean](mailto:emmanuelpean.dev@gmail.com) ([Twitter](https://twitter.com/emmanuel_pean)).  
-Version 0.3.1 (last updated: 9th May 2022).  
+Version 0.4 (last updated: 9th May 2022).  
 Source code: https://github.com/Emmanuelpean/pears""" % (resources.fitting_mode, resources.analysis_mode))
 
 # -------------------------------------------------- MODEL DESCRIPTION -------------------------------------------------
@@ -426,10 +418,13 @@ with st.expander('Model & computational details'):
         st.markdown('#')
         st.markdown('#####')
         st.latex(r'I_{TRPL} \propto n^2')
+        st.latex(r'I_{TRMC}=2\mu n / N_0')
         st.markdown("""where:
 * $n$ is the photoexcited carrier concentration (in $cm^{-3}$)
+* $k_T$ is the trapping rate constant (in $ns^{-1}$)
 * $k_B$ is the bimolecular recombination rate constant (in $cm^3/ns$)
-* $k_T$ is the trapping rate constant (in $ns^{-1}$)""")
+* $k_A$ is the Auger recombination rate constant (in $cm^6/ns$)
+* $\mu$ is the carrier mobility (in $cm^2/(Vs)$)""")
     with col2:
         st.markdown("<h3 style='text-align: center; '>Bimolecular-trapping-detrapping model</h3>",
                     unsafe_allow_html=True)
@@ -438,6 +433,7 @@ with st.expander('Model & computational details'):
         st.latex(r'\frac{dn_t}{dt}=k_T n_e [N_T-n_t]-k_D n_t (n_h+p_0 ),\ \ \ n_t^p(t=0)=n_t^{p-1}(T)')
         st.latex(r'\frac{dn_h}{dt}=-k_B n_e (n_h+p_0 )-k_D n_t (n_h+p_0 ),\ \ \ n_h^p(t=0)=n_h^{p-1}(T)+N_0')
         st.latex(r'I_{TRPL} \propto n_e(n_h+p_0)')
+        st.latex(r'I_{TRMC} = \left(\mu_e n_e + \mu_h n_h \right)/N_0')
         st.markdown("""where:
 * $n_e$ is the photoexcited electron concentration (in $cm^{-3}$)
 * $n_h$ is the photoexcited hole concentration (in $cm^{-3}$)
@@ -446,7 +442,9 @@ with st.expander('Model & computational details'):
 * $k_T$ is the trapping rate constant (in $cm^3/ns$)
 * $k_D$ is the detrapping rate constant (in $cm^3/ns$)
 * $N_T$ is the trap state concentration (in $cm^{-3}$)
-* $p_0$ is the dark hole concentration (in $cm^{-3}$)""")
+* $p_0$ is the dark hole concentration (in $cm^{-3}$)
+* $\mu_e$ is the electron mobility (in $cm^2/(Vs)$)
+* $\mu_h$ is the hole mobility (in $cm^2/(Vs)$)""")
     st.markdown("""####""")
     st.markdown("""For both models, the photoexcited charge carrier concentration $N_0$ is the concentration of carriers
     excited by a single excitation pulse. The initial condition of a carrier concentration after excitation pulse $p$ is 
@@ -458,8 +456,9 @@ with st.expander('Model & computational details'):
     each containing $N_i$ data points, the residue $SS_{res}$ is:""")
     st.latex(r"""SS_{res}=\sum_i^M\sum_j^{N_i}\left(y_{i,j}-F(t_{i,j},A_{i})\right)^2""")
     st.markdown("""where $y_{i,j}$ is the intensity associated with time $t_{i,j}$ of point $j$ of curve $i$.
-    $A_i$ are the model parameters associated with curve $i$ and $F$ is the fitting model given by:""")
+    $A_i$ are the model parameters associated with curve $i$ and $F$ is the fitting model given by for the TRPL and TRMC respectively:""")
     st.latex(r'F(t,I_0, y_0, k_B,...)=I_0 \frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0')
+    st.latex(r'F(t, y_0, k_B,...)=I_{TRMC}(t,k_B,...) + y_0')
     st.markdown(""" where $I_0$ is an intensity factor and $y_0$ is an intensity offset. Contrary to the other parameters of 
     the models (e.g. $k_B$), $I_0$ and $y_0$ are not kept the same between the different TRPL curves *i.e.* the fitting 
     models for curves $A$, $B$,... are:""")
@@ -477,17 +476,18 @@ with st.expander('Model & computational details'):
     with long enough excitation repetition periods such that all carriers can recombine.""")
 
     st.markdown("""#### Carrier accumulation""")
-    st.markdown("""It is possible to  calculate the expected effect of carrier accumulation on the TRPL from the 
+    st.markdown("""It is possible to  calculate the expected effect of carrier accumulation on the TRPL and TRMC from the 
     parameters retrieved from the fits if the repetition period is provided. The carrier accumulation ($CA$) is 
-    calculated as the maximum diffence between the simulated TRPL after the first ($p=1$) and stabilised ($p=s$) pulses:""")
-    st.latex(r'CA=\max\left({\frac{I_{TRPL}^{p=1}(t)}{I_{TRPL}^{p=1}(0)}-\frac{I_{TRPL}^{p=s}(t)}{I_{TRPL}^{p=s}(0)}})\right)')
+    calculated as the maximum difference between the simulated TRPL/TRMC after the first ($p=1$) and stabilised ($p=s$) pulses:""")
+    st.latex(r'{CA}_{TRPL}=\max\left({\frac{I_{TRPL}^{p=1}(t)}{I_{TRPL}^{p=1}(0)}-\frac{I_{TRPL}^{p=s}(t)}{I_{TRPL}^{p=s}(0)}})\right)')
+    st.latex(r'{CA}_{TRMC}=\max\left(I_{TRMC}^{p=1}(t)-I_{TRMC}^{p=s}(t))\right)')
     st.markdown("""The stabilised pulse is defined as when the electron and hole concentrations vary by less than 
     10<sup>-3</sup> % of the photoexcited concentration between two consecutive pulses:""", unsafe_allow_html=True)
     st.latex(r'|n_e^p(t)-n_e^{p+1}(t)|<10^{-5} N_0')
     st.latex(r'|n_h^p(t)-n_h^{p+1}(t)|<10^{-5} N_0')
 
     st.markdown("""#### Contributions""")
-    st.markdown("""The contribution of each process to the TRPL intensity variayions over time is calculated from the 
+    st.markdown("""The contribution of each process to the TRPL intensity variations over time is calculated from the 
     fitted values (see Equations 22 to 25 [here](https://doi.org/10.1039/D0CP04950F)). It is important to ensure that the 
     contribution of a process (e.g., trapping) is non-negligible so that the associated parameters (e.g., $k_T$ 
     in the case of the bimolecular-trapping model) are accurately retrieved.""", unsafe_allow_html=True)
@@ -509,11 +509,11 @@ with st.expander('Model & computational details'):
 
 with st.expander('Getting started'):
     st.markdown("""#### Example""")
-    data1_link = utils.generate_downloadlink(resources.test_file1, text='data set 1')
-    data2_link = utils.generate_downloadlink(resources.test_file2, text='data set 2')
+    data1_link = utils.generate_downloadlink(resources.BT_TRPL_np, text='data set 1')
+    data2_link = utils.generate_downloadlink(resources.BTD_TRPL_p, text='data set 2')
     st.markdown("""Follow these steps to fit TRPL decays.""")
     st.markdown("""1. Upload your data and select the data format (text files and csv are supported). 
-    Check the "Pro-process data" box for PEARS to shift the decay(s) and normalise it;
+    Check the "Pre-process data" box for PEARS to shift the decay(s) and normalise it (the later is done only for TRPL data);
     * _e.g._ %s, 
     * _e.g._ %s""" % (data1_link, data2_link), unsafe_allow_html=True)
 
@@ -544,6 +544,10 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### Date - V 0.4 - Major update
+    * Pears can now fit time-resolved microwave photoconductivity data 🎉
+    * Both recombination models have been modified to account for the carrier mobility
+    * A new "Quantity" input has been added to the sidebar to select the type of data to fit
     #### May 2022 - V 0.3.1.2
     * The Auger rate constant is now fixed to 0 by default.
     * Fixed a bug during which data could not be successfully loaded

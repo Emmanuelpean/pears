@@ -6,39 +6,7 @@ import inspect
 import math
 import streamlit as st
 import base64
-
-
-def stringcolumn_to_array(raw_data, delimiter=None):
-    """ Quickly convert a list of strings to ndarrays
-    :param list of str raw_data: list of strings where each string contains as many numbers as there are columns
-    :param str or None delimiter: delimiter separating two data in the strings
-    :param None, list, tuple, int, np.ndarray usecols: list of 2 integers or int
-
-    Important note: each column must contain the same quantity of data points
-
-    Examples
-    --------
-    >>> stringcolumn_to_array(['1 2', '3 4'])
-    array([[1., 3.],
-           [2., 4.]])
-
-    >>> stringcolumn_to_array(['1,2', '3,4'], ',', [0, 1])
-    array([[1., 3.]])
-
-    >>> stringcolumn_to_array(['1,2,3', '3,4,5'], ',', [1, 3])
-    array([[2., 4.],
-           [3., 5.]])"""
-
-    nb_lines = len(raw_data)
-
-    if delimiter is None:
-        string = '\r\n'.join(raw_data)
-    else:
-        string = delimiter.join(raw_data)
-
-    data_c = np.array(string.split(delimiter), dtype=float)
-
-    return np.transpose(data_c.reshape((nb_lines, -1)))
+from io import StringIO
 
 
 def merge_dicts(*dictionaries):
@@ -207,25 +175,27 @@ def matrix_to_string(arrays, header=None):
 
     Example
     -------
-    >>> arrays1 = [np.array([1, 2, 5]), np.array([1, 2])]
+    >>> arrays1 = [np.array([1.2, 2, 5]), np.array([1.6, 2])]
     >>> header1 = ['A', 'B']
     >>> matrix_to_string(arrays1, header1)
-    'A\tB\n1.00000E+00\t1.00000E+00\t\n2.00000E+00\t2.00000E+00\t\n5.00000E+00\t\t'"""
+    'A,B\n1.20000E+00,1.60000E+00,\n2.00000E+00,2.00000E+00,\n5.00000E+00,,'  # will thrown an error due to \n
+    """
 
     n = np.max([len(array) for array in arrays])
     rows = []
+    delimiter = ','
     for i in range(n):
         row = ''
         for array in arrays:
             if i < len(array):
-                row += '%.5E\t' % array[i]
+                row += '%.5E' % array[i] + delimiter
             else:
-                row += '\t'
+                row += delimiter
         rows.append(row)
     string = '\n'.join(rows)
 
     if header is not None:
-        string = '\t'.join(header) + '\n' + string
+        string = delimiter.join(header) + '\n' + string
 
     return string
 
@@ -291,17 +261,19 @@ def get_power_labels(N0s):
     return ['N<sub>0</sub> = ' + get_power_text(N0, -1) + ' cm<sup>-3</sup>' for N0 in N0s]
 
 
-def process_data(xs_data, ys_data):
+def process_data(xs_data, ys_data, quantity):
     """ Process the data
     :param list xs_data: x data
-    :param list ys_data: y data """
+    :param list ys_data: y data
+    :param str quantity: 'TRPL' or 'TRMC' """
 
     for i in range(len(xs_data)):
         index = ys_data[i].argmax()
         xs_data[i] = xs_data[i][index:]  # reduce range x
         xs_data[i] -= xs_data[i][0]  # shift x
         ys_data[i] = ys_data[i][index:]  # reduce range y
-        ys_data[i] /= ys_data[i][0]  # normalise y
+        if quantity == 'TRPL':
+            ys_data[i] /= ys_data[i][0]  # normalise y
     return xs_data, ys_data
 
 
@@ -323,6 +295,43 @@ def get_data_index(content, delimiter=None):
                 return index
             except ValueError:
                 continue
+
+
+def load_data(content, delimiter, data_format, ):
+    """ Process the data contained in a file
+    :param bytes content: content string
+    :param str delimiter: data delimiter
+    :param str data_format: data column format
+
+    Examples
+    --------
+    >>> import core.resources
+
+    >>> file1 = open(core.resources.BT_TRPL_np_file, 'rb')
+    >>> data1 = load_data(file1.read(), ' ', 'X/Y1/Y2/Y3...')
+    >>> file1.close()
+
+    >>> file2 = open(core.resources.incomplete_file, 'rb')
+    >>> data2 = load_data(file2.read(), ',', 'X1/Y1')
+    >>> file2.close() """
+
+    # Find data index and load the data
+    content1 = content.decode('ascii').splitlines()
+    content1 = [line.strip(delimiter) for line in content1]  # remove any extra delimiter on each line
+    index = get_data_index(content1, delimiter)
+    data = np.transpose(np.genfromtxt(StringIO(content.decode('ascii')), delimiter=delimiter, skip_header=index))
+
+    # Sort the data
+    if data_format == 'X/Y1/Y2/Y3...':
+        xs_data, ys_data = np.array([data[0]] * (len(data) - 1)), data[1:]
+    else:
+        xs_data, ys_data = data[::2], data[1::2]
+
+    # Check the data
+    xs_data = [x_data[np.invert(np.isnan(x_data))] for x_data in xs_data]
+    ys_data = [y_data[np.invert(np.isnan(y_data))] for y_data in ys_data]
+
+    return xs_data, ys_data
 
 
 if __name__ == '__main__':

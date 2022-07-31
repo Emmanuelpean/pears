@@ -24,10 +24,10 @@ class Fit(object):
         -------
         >>> from core import models
         >>> from core import resources
-        >>> x_data1 = resources.test_file1[0]
-        >>> ys_data1 = resources.test_file1[1:]
+        >>> x_data1 = resources.BT_TRPL_np[0]
+        >>> ys_data1 = resources.BT_TRPL_np[1:]
         >>> xs_data1 = [x_data1] * len(ys_data1)
-        >>> function1 = models.BTModel().calculate_trpl
+        >>> function1 = models.BTModel().calculate_fit_quantity
         >>> p01 = dict(k_T=1e-3, k_B=1e-20, k_A=1e-40, y_0=0.01, I=1)
         >>> detached_parameters1 = ['y_0']
         >>> fixed_parameters1 = [dict(N_0=1e15), dict(N_0=1e16), dict(N_0=1e17)]
@@ -126,10 +126,10 @@ def run_grid_fit(p0s, fixed_parameters, filters, progressbar=None, **kwargs):
     -------
     >>> from core import models
     >>> from core import resources
-    >>> x_data1 = resources.test_file1[0]
-    >>> ys_data1 = resources.test_file1[1:]
+    >>> x_data1 = resources.BT_TRPL_np[0]
+    >>> ys_data1 = resources.BT_TRPL_np[1:]
     >>> xs_data1 = [x_data1] * len(ys_data1)
-    >>> function1 = models.BTModel().calculate_trpl
+    >>> function1 = models.BTModel().calculate_fit_quantity
     >>> detached_parameters1 = ['y_0']
     >>> fixed_parameters1 = [dict(N_0=1e15), dict(N_0=1e16), dict(N_0=1e17)]
     >>> p0s1 = dict(k_T=[1e-2, 1e-4], k_B=[1e-20, 1e-19], k_A=[1e-40, 1e-45], y_0=[0], I=[1])
