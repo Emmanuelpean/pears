@@ -395,7 +395,8 @@ class BTModel(Model):
 
         n = self.calculate_concentrations(t, N_0, **kwargs)['n'][-1]
         I_TRPL = n ** 2 / N_0
-        return I * I_TRPL / I_TRPL[0] + y_0
+        signal = I_TRPL / I_TRPL[0] + y_0
+        return I * signal / signal[0]
 
     def get_recommendations(self, contributions, threshold=10):
         """ Get recommendations for the contributions """
@@ -489,7 +490,8 @@ class BTDModel(Model):
 
         n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
         I_TRPL = n['n_e'][-1] * (n['n_h'][-1] + p_0) / N_0
-        return I * I_TRPL / I_TRPL[0] + y_0
+        signal = I_TRPL / I_TRPL[0] + y_0
+        return I * signal / signal[0]
 
     def get_recommendations(self, contributions, threshold=10):
         """ Get recommendations for the contributions """

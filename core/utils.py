@@ -12,7 +12,6 @@ def stringcolumn_to_array(raw_data, delimiter=None):
     """ Quickly convert a list of strings to ndarrays
     :param list of str raw_data: list of strings where each string contains as many numbers as there are columns
     :param str or None delimiter: delimiter separating two data in the strings
-    :param None, list, tuple, int, np.ndarray usecols: list of 2 integers or int
 
     Important note: each column must contain the same quantity of data points
 

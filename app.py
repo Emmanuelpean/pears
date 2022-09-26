@@ -99,10 +99,9 @@ if input_filename is not None:
     try:
         # Find data index and load the data
         content = input_filename.getvalue().decode('ascii').splitlines()
-        print(content)
         content = [line.strip(data_delimiter) for line in content]  # remove any extra delimiter on each line
         index = utils.get_data_index(content, data_delimiter)
-        data = utils.stringcolumn_to_array(content[index:], data_delimiter)
+        data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
@@ -459,12 +458,12 @@ with st.expander('Model & computational details'):
     st.latex(r"""SS_{res}=\sum_i^M\sum_j^{N_i}\left(y_{i,j}-F(t_{i,j},A_{i})\right)^2""")
     st.markdown("""where $y_{i,j}$ is the intensity associated with time $t_{i,j}$ of point $j$ of curve $i$.
     $A_i$ are the model parameters associated with curve $i$ and $F$ is the fitting model given by:""")
-    st.latex(r'F(t,I_0, y_0, k_B,...)=I_0 \frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0')
-    st.markdown(""" where $I_0$ is an intensity factor and $y_0$ is an intensity offset. Contrary to the other parameters of 
-    the models (e.g. $k_B$), $I_0$ and $y_0$ are not kept the same between the different TRPL curves *i.e.* the fitting 
-    models for curves $A$, $B$,... are:""")
-    st.latex(r'F_A(t,I_0^A, y_0^A, k_B,...)=I_0^A \frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0^A')
-    st.latex(r'F_B(t,I_0^B, y_0^B, k_B,...)=I_0^B \frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0^B')
+    st.latex(r'F(t,I_0, y_0, k_B,...)=I_0 \left(\frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0\right)/\left(1+y_0\right)')
+    st.markdown(""" where $I_0$ is an intensity factor and $y_0$ is an intensity offset (*e.g.* to account for dark counts). 
+    Contrary to the other parameters of the models (e.g. $k_B$), $I_0$ and $y_0$ are not kept the same between the different 
+    TRPL curves *i.e.* the fitting models for curves $A$, $B$,... are:""")
+    st.latex(r'F_A(t,I_0^A, y_0^A, k_B,...)=I_0^A \left(\frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0^A\right)/\left(1+y_0^A\right)')
+    st.latex(r'F_B(t,I_0^B, y_0^B, k_B,...)=I_0^B \left(\frac{I_{TRPL}(t,k_B,...)}{I_{TRPL}(0, k_B,...)} + y_0^B\right)/\left(1+y_0^B\right)')
     st.latex('...')
     st.markdown("""By default, $I_0$ and $y_0$ are respectively fixed at 1 and 0 (assuming no background noise and 
     normalised intensity. The quality of the fit is estimated from the coefficient of determination $R^2$:""")
@@ -544,6 +543,10 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### September 2022 - V 0.3.1.3
+    * Changed the equation of the model $F$ used to fit the data. The intensity is now normalised with respect to the sum \
+    of the normalised TRPL intensity (1) and the intensity offset $y_0$.
+    * Fixed a bug during which data could not be successfully loaded
     #### May 2022 - V 0.3.1.2
     * The Auger rate constant is now fixed to 0 by default.
     * Fixed a bug during which data could not be successfully loaded
@@ -562,8 +565,7 @@ with st.expander('Changelog'):
     * Fixed a pesky bug that prevented from changing the parameter fixed values
     * Changed the model descriptions
     * Added new parallel plot visualisation for grid fitting analysis
-    * Fits and Grid fit analysis now stay on screen until the run button is pressed again (unless the mode or the data 
-    are changed)
+    * Fits and Grid fit analysis now stay on screen until the run button is pressed again (unless the mode or the data are changed)
     * Added disclaimer
     * Added website icon
     * Added video tutorial
