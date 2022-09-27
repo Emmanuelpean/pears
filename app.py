@@ -402,7 +402,7 @@ Two modes are available.
 - The "%s" mode runs the fitting optimisation for a range of guess parameters.
 If all the optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple solutions\n
 App created and maintained by [Emmanuel V. Pean](mailto:emmanuelpean.dev@gmail.com) ([Twitter](https://twitter.com/emmanuel_pean)).  
-Version 0.3.1 (last updated: 9th May 2022).  
+Version 0.3.1 (last updated: 27th September 2022).  
 Source code: https://github.com/Emmanuelpean/pears""" % (resources.fitting_mode, resources.analysis_mode))
 
 # -------------------------------------------------- MODEL DESCRIPTION -------------------------------------------------
@@ -544,6 +544,7 @@ with st.expander('Getting started'):
 with st.expander('Changelog'):
     st.markdown("""
     #### September 2022 - V 0.3.1.3
+    * Updated logo
     * Changed the equation of the model $F$ used to fit the data. The intensity is now normalised with respect to the sum \
     of the normalised TRPL intensity (1) and the intensity offset $y_0$.
     * Fixed a bug during which data could not be successfully loaded
