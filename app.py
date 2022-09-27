@@ -22,7 +22,7 @@ from core import resources
 # ----------------------------------------------------------------------------------------------------------------------
 
 # General setup & layout
-st.set_page_config('Pears', resources.icon_filename, layout='wide')
+st.set_page_config('PEARS', resources.icon_filename, layout='wide')
 st.markdown("""<style> #MainMenu {visibility: hidden;} footer {visibility: hidden;} </style>""", unsafe_allow_html=True)  # hide main menu and footer
 st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)  # set all radio buttons in row
 
