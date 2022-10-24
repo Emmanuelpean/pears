@@ -401,7 +401,7 @@ Two modes are available.
 - The "%s" mode can be used to fit experimental data given a set of guess parameters.
 - The "%s" mode runs the fitting optimisation for a range of guess parameters.
 If all the optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple solutions\n
-App created and maintained by [Emmanuel V. Pean](mailto:emmanuelpean.dev@gmail.com) ([Twitter](https://twitter.com/emmanuel_pean)).  
+App created and maintained by [Emmanuel V. Pean](https://emmanuelpean.streamlitapp.com).  
 Version 0.3.1 (last updated: 27th September 2022).  
 Source code: https://github.com/Emmanuelpean/pears""" % (resources.fitting_mode, resources.analysis_mode))
 
