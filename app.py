@@ -584,4 +584,3 @@ with st.expander('Disclaimer'):
 # ------------------------------------------------------ ANALYTICS -----------------------------------------------------
 
 components.html("""<script async defer src="https://analytics.umami.is/script.js" data-website-id="d429fb05-c185-47a1-8902-997b5931e332"></script>""")
-st.text('Test')
