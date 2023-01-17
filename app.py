@@ -1,8 +1,8 @@
-""" main scipt
+""" main script
 Important notes:
 - Changing the app mode resets all the results
 - Changing the period changes data associated with the fit
-- Changing any other value does not re-run the fit but displays a message about it
+- Changing any other value does not re-run the fit but displays a warning message
 - Changing the data loaded resets everything """
 
 import streamlit as st
@@ -583,5 +583,4 @@ with st.expander('Disclaimer'):
 
 # ------------------------------------------------------ ANALYTICS -----------------------------------------------------
 
-components.html("""<script async defer data-website-id="62a61960-56c2-493b-90e0-20e6796ecfa4" 
-src="https://pears-tracking.herokuapp.com/umami.js"></script>""")
+components.html("""<script async defer src="https://analytics.umami.is/script.js" data-website-id="d429fb05-c185-47a1-8902-997b5931e332"></script>""")
