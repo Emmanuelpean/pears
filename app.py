@@ -314,7 +314,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
             st.subheader('Displaying results of fit #%i' % (int(selected[0]) + 1))
 
         # --------------------------------------------------------------------------------------------------------------
-        # ------------------------------------------------ DISPLAYT FIT  -----------------------------------------------
+        # ------------------------------------------------ DISPLAY FIT  ------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------
 
         col1, col2 = st.columns(2)
@@ -584,3 +584,6 @@ with st.expander('Disclaimer'):
 # ------------------------------------------------------ ANALYTICS -----------------------------------------------------
 
 components.html("""<script async defer src="https://analytics.umami.is/script.js" data-website-id="d429fb05-c185-47a1-8902-997b5931e332"></script>""")
+
+
+# TODO unchecking "processing data" does not show the warning message

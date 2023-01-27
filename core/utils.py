@@ -272,7 +272,7 @@ def generate_downloadlink(array, header=None, text=''):
     
     string = matrix_to_string(array, header)
     b64 = base64.b64encode(string.encode()).decode()
-    return r'<a href="data:file/csv;base64,%s" width="30">' % b64 + text + '</a>'
+    return r'<a download=%s.txt href="data:file/csv;base64,%s" target="_blank">' % (text.replace(' ', '_'), b64) + text + '</a>'
 
 
 def list_to_dict(dicts):
