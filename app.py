@@ -275,7 +275,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
     else:
         if st.session_state.results[1] != model or st.session_state.results[2] != N0s or st.session_state.results[3] != process_input:
             info_message.warning('You have changed some of the input settings. Press "run" to apply the changes')
-        variable, model, N0s = st.session_state.results
+        variable, model, N0s, process_input = st.session_state.results
 
     with results_container.container():
 
