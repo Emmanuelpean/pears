@@ -6,25 +6,26 @@ Important notes:
 - Changing the data loaded resets everything """
 
 import streamlit as st
-import streamlit.components.v1 as components
-
-import numpy as np
-import copy
-import pandas as pd
-
-from core import utils
-from core import models
-from core import plot
-from core import resources
+# import streamlit.components.v1 as components
+#
+# import numpy as np
+# import copy
+# import pandas as pd
+#
+# from core import utils
+# from core import models
+# from core import plot
+# from core import resources
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
 # General setup & layout
-st.set_page_config('PEARS', resources.icon_filename, layout='wide')
-st.markdown("""<style> #MainMenu {visibility: hidden;} footer {visibility: hidden;} </style>""", unsafe_allow_html=True)  # hide main menu and footer
-st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)  # set all radio buttons in row
+st.markdown('Test')
+#st.set_page_config('PEARS', resources.icon_filename, layout='wide')
+#st.markdown("""<style> #MainMenu {visibility: hidden;} footer {visibility: hidden;} </style>""", unsafe_allow_html=True)  # hide main menu and footer
+#st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)  # set all radio buttons in row
 #
 # # Load the models and store them in the session state
 # if 'models' not in st.session_state:
