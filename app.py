@@ -91,9 +91,6 @@ data_delimiter = {'tab/space': None, 'comma': ',', 'semicolon': ';'}[data_delimi
 # Processing data
 preprocess_help = 'Shift the decay maximum intensity to $t=0$ and normalise the intensity.'
 process_input = st.sidebar.checkbox('Pre-process data', help=preprocess_help, key='preprocess_')
-if st.session_state.preprocess != process_input:
-    reset_all()
-    st.session_state.preprocess = process_input
 
 # Load the data
 data_message = st.empty()
@@ -265,7 +262,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
             try:
                 print('Calling fitting')
                 variable = model.fit(xs_data, ys_data, N0s)
-                st.session_state.results = copy.deepcopy([variable, model, N0s])
+                st.session_state.results = copy.deepcopy([variable, model, N0s, process_input])
             except ValueError:
                 info_message.error('Uh Oh, could not fit the data. Try changing the parameter guess values.')
                 raise AssertionError('Fit failed')
@@ -273,10 +270,10 @@ if st.session_state.ran:  # display the results if the run button has been previ
             progressbar = st.sidebar.progress(0)
             st.session_state.period = ''  # force reset
             variable = model.grid_fitting(progressbar, N0s, xs_data=xs_data, ys_data=ys_data)
-            st.session_state.results = copy.deepcopy([variable, model, N0s])
+            st.session_state.results = copy.deepcopy([variable, model, N0s, process_input])
         info_message.empty()
     else:
-        if st.session_state.results[1] != model or st.session_state.results[2] != N0s:
+        if st.session_state.results[1] != model or st.session_state.results[2] != N0s or st.session_state.results[3] != process_input:
             info_message.warning('You have changed some of the input settings. Press "run" to apply the changes')
         variable, model, N0s = st.session_state.results
 
