@@ -508,13 +508,13 @@ with st.expander('Model & computational details'):
 
 with st.expander('Getting started'):
     st.markdown("""#### Example""")
-    data1_link = utils.generate_downloadlink(resources.test_file1, text='data set 1')
-    data2_link = utils.generate_downloadlink(resources.test_file2, text='data set 2')
-    st.markdown("""Follow these steps to fit TRPL decays.""")
-    st.markdown("""1. Upload your data and select the data format (text files and csv are supported). 
-    Check the "Pro-process data" box for PEARS to shift the decay(s) and normalise it;
-    * _e.g._ %s, 
-    * _e.g._ %s""" % (data1_link, data2_link), unsafe_allow_html=True)
+    # data1_link = utils.generate_downloadlink(resources.test_file1, text='data set 1')
+    # data2_link = utils.generate_downloadlink(resources.test_file2, text='data set 2')
+    # st.markdown("""Follow these steps to fit TRPL decays.""")
+    # st.markdown("""1. Upload your data and select the data format (text files and csv are supported).
+    # Check the "Pro-process data" box for PEARS to shift the decay(s) and normalise it;
+    # * _e.g._ %s,
+    # * _e.g._ %s""" % (data1_link, data2_link), unsafe_allow_html=True)
 
     st.markdown("""2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL intensity 
     measured (separated by a comma);
