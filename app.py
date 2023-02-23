@@ -99,9 +99,10 @@ if input_filename is not None:
     try:
         # Find data index and load the data
         content = input_filename.getvalue().decode('ascii').splitlines()
-        content = [line.strip(data_delimiter) for line in content]  # remove any extra delimiter on each line
         index = utils.get_data_index(content, data_delimiter)
         data = np.genfromtxt(input_filename, delimiter=data_delimiter, unpack=True, skip_header=index)
+        if np.all(np.isnan(data[-1])):
+            data = data[:-1]
 
         # Sort the data
         if data_format == 'X/Y1/Y2/Y3...':
@@ -402,7 +403,7 @@ Two modes are available.
 - The "%s" mode runs the fitting optimisation for a range of guess parameters.
 If all the optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple solutions\n
 App created and maintained by [Emmanuel V. Pean](https://emmanuelpean.streamlitapp.com).  
-Version 0.3.1 (last updated: 27th September 2022).  
+Version 0.3.1 (last updated: 23rd February 2023).  
 Source code: https://github.com/Emmanuelpean/pears""" % (resources.fitting_mode, resources.analysis_mode))
 
 # -------------------------------------------------- MODEL DESCRIPTION -------------------------------------------------
@@ -543,6 +544,8 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### February 2023 - V 0.3.1.4
+    * Fixed a bug preventing to load certain data files
     #### September 2022 - V 0.3.1.3
     * Updated logo
     * Changed the equation of the model $F$ used to fit the data. The intensity is now normalised with respect to the sum \
@@ -584,6 +587,3 @@ with st.expander('Disclaimer'):
 # ------------------------------------------------------ ANALYTICS -----------------------------------------------------
 
 components.html("""<script async defer src="https://analytics.umami.is/script.js" data-website-id="d429fb05-c185-47a1-8902-997b5931e332"></script>""")
-
-
-# TODO unchecking "processing data" does not show the warning message
