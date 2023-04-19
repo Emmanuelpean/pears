@@ -227,7 +227,7 @@ if N0s is not None:
 
 period = ''
 if N0s is not None:
-    period_help = 'Excitation repetition period. Used to calculate possible carrier accumulation between consecutive ' \
+    period_help = 'Excitation repetition period used to calculate possible carrier accumulation between consecutive ' \
                   'excitation pulses.'
     period = st.sidebar.text_input('Excitation repetition period (ns)', help=period_help, key='period_input')
     try:
@@ -275,7 +275,7 @@ if st.session_state.ran:  # display the results if the run button has been previ
         info_message.empty()
     else:
         if st.session_state.results[1] != model or st.session_state.results[2] != N0s:
-            info_message.warning('You have changed some of the input settings. Press "run" to apply the changes')
+            info_message.warning('Some of the parameters have been changed. Press "run" to apply the changes')
         variable, model, N0s = st.session_state.results
 
     with results_container.container():
@@ -325,7 +325,8 @@ if st.session_state.ran:  # display the results if the run button has been previ
         col1.markdown("""#### TRPL fitting""")
 
         # Plot
-        col1.plotly_chart(plot.plot_fit(fit['xs_data'], fit['ys_data'], fit['fit_ydata'], fit['N0s_labels']), use_container_width=True)
+        main_fig = plot.plot_fit(fit['xs_data'], fit['ys_data'], fit['fit_ydata'], fit['N0s_labels'])
+        col1.plotly_chart(main_fig, use_container_width=True)
 
         # Export
         header = np.concatenate([['Time (ns)', 'Intensity %i' % i] for i in range(1, len(ys_data) + 1)])
@@ -403,7 +404,7 @@ Two modes are available.
 - The "%s" mode runs the fitting optimisation for a range of guess parameters.
 If all the optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple solutions\n
 App created and maintained by [Emmanuel V. Pean](https://emmanuelpean.streamlitapp.com).  
-Version 0.3.1 (last updated: 23rd February 2023).  
+Version 0.3.2 (last updated: 19th April 2023).  
 Source code: https://github.com/Emmanuelpean/pears""" % (resources.fitting_mode, resources.analysis_mode))
 
 # -------------------------------------------------- MODEL DESCRIPTION -------------------------------------------------
@@ -544,6 +545,8 @@ with st.expander('Getting started'):
 
 with st.expander('Changelog'):
     st.markdown("""
+    #### April 2023 - V 0.3.2
+    * Add button allowing to display the data with a linear or log scale
     #### February 2023 - V 0.3.1.4
     * Fixed a bug preventing to load certain data files
     #### September 2022 - V 0.3.1.3

@@ -36,12 +36,29 @@ def subplots(n, m=None, **kwargs):
 
 def plot_fit(xs_data, ys_data, ys_data_fit=None, labels=None):
     """ Plot raw data and fit data
-    :param list, np.ndarray xs_data: list of np.ndarray associated with the x axis
-    :param list, np.ndarray ys_data: list of np.ndarray associated with the y axis (raw data)
-    :param list, np.ndarray ys_data_fit: list of np.ndarray associated with the y axis (fit)
+    :param list, np.ndarray xs_data: list of np.ndarray associated with the x-axis
+    :param list, np.ndarray ys_data: list of np.ndarray associated with the y-axis (raw data)
+    :param list, np.ndarray ys_data_fit: list of np.ndarray associated with the y-axis (fit)
     :param list labels: list of labels or floats """
 
-    figure = go.Figure()
+    updatemenus = list([
+        dict(active=1,
+             buttons=list([
+                 dict(label='Log Scale',
+                      method='update',
+                      args=[{'visible': [True, True]},
+                            {'yaxis': {'type': 'log', 'tickformat': '%.2e', 'dtick': 1}}]),
+                 dict(label='Linear Scale',
+                      method='update',
+                      args=[{'visible': [True, True]},
+                            {'yaxis': {'type': 'linear'}}])
+             ]),
+             x=0.7, y=1.2
+             )
+    ])
+
+    figure = go.Figure(layout=dict(updatemenus=updatemenus))
+
     for i in range(len(xs_data)):
         figure.add_trace(go.Scatter(x=xs_data[i], y=ys_data[i], name=labels[i], line=dict(color=COLORS[i])))
         if ys_data_fit is not None:
