@@ -328,7 +328,7 @@ class Model(object):
         :param str process: name of the process
         :param str val: 'higher' or 'lower' """
 
-        string = 'This fit predicts low %s. The values associated with this process may be inacurate.' % process
+        string = 'This fit predicts low %s. The values associated with this process may be inaccurate.' % process
         if val:
             string += '\nIt is recommended to measure your sample under %s excitation fluence for this process to become ' \
                       'significant' % val

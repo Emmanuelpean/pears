@@ -43,8 +43,8 @@ assert popts3[0] == {'k_B': 2.594833719093791e-19, 'k_T': 1.2272907649841054e-16
 
 # ---------------------------------------------------- FITTING PLOT ----------------------------------------------------
 
-plot.plot_fit([xdata] * len(ydata), ydata, fit1.calculate_fits(popts1), labels).show()
-plot.plot_fit([xdata] * len(ydata), ydata, fit3.calculate_fits(popts3), labels).show()
+plot.plot_fit([xdata] * len(ydata), ydata, fit1.calculate_fits(popts1[0]), labels).show()
+plot.plot_fit([xdata] * len(ydata), ydata, fit3.calculate_fits(popts3[0]), labels).show()
 
 
 # ------------------------------------------------- CONCENTRATIONS PLOT ------------------------------------------------
