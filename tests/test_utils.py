@@ -472,7 +472,7 @@ class TestGenerateDownloadLink:
         header = ["A", "B", "C"]
         text = "Download Data"
         result = generate_download_link(data, header, text)
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
     def test_no_header(self):
@@ -480,7 +480,7 @@ class TestGenerateDownloadLink:
         data = np.array([[1, 2, 3], [4, 5, 6]])
         text = "Download Data"
         result = generate_download_link(data, None, text)
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
     def test_empty_matrix(self):
@@ -488,7 +488,7 @@ class TestGenerateDownloadLink:
         data = np.array([[], []])
         text = "Download Data"
         result = generate_download_link(data, None, text)
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
     def test_single_row_matrix(self):
@@ -497,7 +497,7 @@ class TestGenerateDownloadLink:
         header = ["A", "B", "C"]
         text = "Download Data"
         result = generate_download_link(data, header, text)
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
     def test_single_column_matrix(self):
@@ -506,7 +506,7 @@ class TestGenerateDownloadLink:
         header = ["A"]
         text = "Download Data"
         result = generate_download_link(data, header, text)
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
     def test_with_special_characters(self):
@@ -532,8 +532,8 @@ class TestGenerateDownloadLink:
         data = np.array([[1, 2, 3], [4, 5, 6]])
         header = ["A", "B", "C"]
         result = generate_download_link(data, header, "")
-        assert '<a href="data:file/csv;base64,' in result
-        assert 'href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
+        assert 'href="data:text/csv;base64,' in result
         assert "Download" not in result  # Should not have any text if empty
 
     def test_large_data(self):
@@ -541,7 +541,7 @@ class TestGenerateDownloadLink:
         data = np.random.rand(100, 100)
         header = [f"Col{i}" for i in range(100)]
         result = generate_download_link(data, header, "Download Large Data")
-        assert '<a href="data:file/csv;base64,' in result
+        assert '<a href="data:text/csv;base64,' in result
         assert "Download Large Data" in result
 
     def test_b64_encoding(self):
