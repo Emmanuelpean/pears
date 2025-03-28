@@ -221,6 +221,6 @@ class TestApp:
 
 
 if __name__ != "__main__":
-    main_path = "../app/main.py"
+    main_path = os.path.join(os.getcwd(), "../../app/main.py")
 else:
-    main_path = "pears/app/main.py"
+    main_path = "app/main.py"
