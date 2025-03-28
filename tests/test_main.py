@@ -223,4 +223,4 @@ class TestApp:
 if __name__ != "__main__":
     main_path = "../app/main.py"
 else:
-    main_path = "app/main.py"
+    main_path = "pears/app/main.py"
