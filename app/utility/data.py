@@ -123,10 +123,10 @@ def are_identical(
             return np.array_equal(obj1, obj2)
 
 
-def are_close(*args):
+def are_close(*args, rtol=1e-3):
     """Check if two objects are similar"""
 
-    return are_identical(*args, rtol=1e-2)
+    return are_identical(*args, rtol=rtol)
 
 
 def get_data_index(

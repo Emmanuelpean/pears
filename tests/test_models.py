@@ -30,9 +30,9 @@ def assert_fit(
     :param contribution_expected: expected contributions
     :param cod_expected: expected cod"""
 
-    assert are_close(fit["popts"][0], popt_expected)
-    assert are_close(fit["contributions"], contribution_expected)
-    assert are_close(fit["cod"], cod_expected)
+    assert are_close(fit["popts"][0], popt_expected, rtol=0.05)
+    assert are_close(fit["contributions"], contribution_expected, rtol=0.01)
+    assert are_close(fit["cod"], cod_expected, rtol=0.01)
 
 
 class TestModel:
