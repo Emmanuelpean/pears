@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: pulling git repo
-        uses: actions/checkout@vlatest
+        uses: actions/checkout@latest
       - name: Install python
         uses: actions/setup-python@latest
         with:
