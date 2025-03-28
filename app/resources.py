@@ -1,29 +1,25 @@
+import os.path
 from os import path
 
-import numpy as np
+from models import BTDModelTRMC, BTDModelTRPL, BTModelTRMC, BTModelTRPL
+from utility.data import generate_download_link
 
 resources_path = path.join(path.dirname(path.dirname(__file__)), "resources")
 
+CSS_STYLE_PATH = os.path.join(resources_path, "style.css")
 
 # -------------------------------------------------------- DATA --------------------------------------------------------
 
-
-# TRPL - BT (from experimental measurement) - X/Y1/Y2/Y3/...
-BT_TRPL_DATA_PATH = path.join(resources_path, "data/BT_TRPL_data.txt")
-BT_TRPL_DATA = np.loadtxt(BT_TRPL_DATA_PATH, unpack=True)
-
-# TRPL - BTD (simulated with noise) - X/Y1/Y2/Y3/...
-BTD_TRPL_DATA_PATH = path.join(resources_path, "data/BTD_TRPL_data.txt")
-BTD_TRPL_DATA = np.loadtxt(BTD_TRPL_DATA_PATH, unpack=True)
-
-# TRMC - BTD (simulated) - X/Y1/Y2/Y3/...
-BTD_TRMC_DATA_PATH = path.join(resources_path, "data/BTD_TRMC_data.txt")
-BTD_TRMC_DATA = np.loadtxt(BTD_TRMC_DATA_PATH, unpack=True, skiprows=1)
-
-# TRMC - BTD (from Brenes 2017) - X1/Y1/X2/Y2/...
-BTD_TRMC_DATA_PATH_2 = path.join(resources_path, "data/BTD_TRMC_data_2.txt")
-BTD_TRMC_DATA_2 = np.loadtxt(BTD_TRMC_DATA_PATH_2, unpack=True, skiprows=1)
-
+BT_TRPL_DATA = BTModelTRPL().generate_decays(noise=0.02)
+BT_TRMC_DATA = BTModelTRMC().generate_decays(noise=0.02)
+BTD_TRPL_DATA = BTDModelTRPL().generate_decays(noise=0.02)
+BTD_TRMC_DATA = BTDModelTRMC().generate_decays(noise=0.02)
+BT_header = ["Time (ns)"] + ["Intensity %i" % i for i in range(1, len(BT_TRPL_DATA[2]) + 1)]
+BTD_header = ["Time (ns)"] + ["Intensity %i" % i for i in range(1, len(BTD_TRPL_DATA[2]) + 1)]
+BT_TRPL_LINK = generate_download_link(BT_TRPL_DATA[:2], BT_header, text="TRPL data set 1 (BT model)")
+BT_TRMC_LINK = generate_download_link(BT_TRMC_DATA[:2], BT_header, text="TRMC data set 1 (BT model)")
+BTD_TRPL_LINK = generate_download_link(BTD_TRPL_DATA[:2], BTD_header, text="TRPL data set 1 (BTD model)")
+BTD_TRMC_LINK = generate_download_link(BTD_TRMC_DATA[:2], BTD_header, text="TRMC data set 2 (BTD model)")
 
 # ------------------------------------------------------- IMAGES -------------------------------------------------------
 
@@ -41,6 +37,6 @@ BTD_MODEL_PATH = path.join(resources_path, "medias/BTD_model.svg")
 
 
 FITTING_MODE = "Fitting"
-ANALYSIS_MODE = "Grid fitting"
+ANALYSIS_MODE = "Grid Fitting"
 APP_MODES = (FITTING_MODE, ANALYSIS_MODE)
 TUTORIAL_PATH = open(path.join(resources_path, "medias/tutorial.mp4"), "rb").read()

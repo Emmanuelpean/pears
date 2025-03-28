@@ -1,11 +1,42 @@
 """fitting module"""
 
-import itertools
-
 import numpy as np
 import scipy.optimize as sco
 
-import utils
+from utility.dict import merge_dicts
+
+
+def normalize_to_unit(number: float) -> tuple[float, int]:
+    """Normalize a number to the range [0.1, 1], adjusting the power (exponent) accordingly.
+    The function returns the normalized value and the exponent.
+
+    Examples
+    --------
+    >>> normalize_to_unit(1.433364345e9)
+    (0.1433364345, 10)
+    >>> normalize_to_unit(14e-6)
+    (0.13999999999999999, -4)
+    >>> normalize_to_unit(-14e-6)
+    (-0.13999999999999999, -4)"""
+
+    exponent = 0  # exponent value
+    value = number  # normalized value
+
+    if value == 0.0:
+        value = 0.0
+        exponent = 0
+
+    elif abs(value) < 1:
+        while abs(value) < 0.1:
+            value *= 10.0
+            exponent -= 1
+
+    elif abs(value) > 1:
+        while abs(value) > 1:
+            value /= 10.0
+            exponent += 1
+
+    return value, exponent
 
 
 class Fit(object):
@@ -50,7 +81,7 @@ class Fit(object):
         self.keys = list(self.p0.keys())  # all keys except for the ones fixed
 
         # Normalise the initial guess values to unit to facilitate the optimisation
-        p0_split = {key: utils.normalize_to_unit(self.p0[key]) for key in self.p0}
+        p0_split = {key: normalize_to_unit(self.p0[key]) for key in self.p0}
         self.p0_mantissa, self.p0_factors = [{key: val[i] for key, val in p0_split.items()} for i in (0, 1)]
 
         # Generate the positive bounds
@@ -77,7 +108,7 @@ class Fit(object):
             # Determine the value of the detached parameters
             supp = np.array(alist[len(self.keys) :]).reshape((-1, len(self.detached_parameters)))
             # Add the detached values to each dictionary
-            dicts = [utils.merge_dicts(dict(zip(self.detached_parameters, p)), base_dict) for p in supp]
+            dicts = [merge_dicts(dict(zip(self.detached_parameters, p)), base_dict) for p in supp]
             # Add the base dictionary to the list
             dicts = [base_dict] + dicts
 
@@ -96,7 +127,7 @@ class Fit(object):
         params_list = self.list_to_dicts(alist)
         errors = []
         for params, x, y, fp in zip(params_list, self.xs_data, self.ys_data, self.fixed_parameters):
-            errors.append((self.function(x, **utils.merge_dicts(params, fp)) - y))
+            errors.append((self.function(x, **merge_dicts(params, fp)) - y))
         return np.concatenate(errors)
 
     def fit(self) -> list[dict]:
@@ -110,7 +141,7 @@ class Fit(object):
             **self.kwargs,
         ).x
         popts_dicts = self.list_to_dicts(popts)
-        return [utils.merge_dicts(i, j) for i, j in zip(popts_dicts, self.fixed_parameters)]
+        return [merge_dicts(i, j) for i, j in zip(popts_dicts, self.fixed_parameters)]
 
     def calculate_rss(self, y2: list[np.ndarray]) -> float:
         """Calculate the residual sum of squares"""
@@ -124,52 +155,3 @@ class Fit(object):
         :param popts: list of optimised parameter dicts"""
 
         return [self.function(x, **popt) for x, popt in zip(self.xs_data, popts)]
-
-
-def run_grid_fit(
-    p0s: dict[str, list],
-    fixed_parameters: list[dict],
-    filters: list[str] | None,
-    progressbar=None,
-    **kwargs,
-) -> tuple[dict, dict, np.ndarray]:
-    """Run a grid of fits each with different initial guess values
-    :param p0s: dictionary with each key associated with a list of floats. Need to contain all the parameters.
-    :param fixed_parameters: argument of the least_square function
-    :param filters: list of string filters
-    :param progressbar: optional streamlit progressbar
-    :param kwargs: keyword argument passed to the least_square function
-    :return a dict of the optimised values, a dict of the guess values and an array of CODs"""
-
-    # Calculate all the combinations of parameters
-    p0s = {key: p0s[key] for key in p0s if key not in fixed_parameters[0]}  # filter out the fixed parameters
-    pkeys, pvalues = zip(*p0s.items())
-    all_p0s = [dict(zip(pkeys, v)) for v in itertools.product(*pvalues)]
-    if filters is not None:
-        all_p0s = utils.filter_dicts(all_p0s, filters, fixed_parameters[0])
-
-    # Run the fits
-    data_opt, data_init, cods = [], [], []
-    for i, p0 in enumerate(all_p0s):
-
-        # Update the progressbar if provided
-        if progressbar is not None:
-            progressbar.progress(i / float(len(all_p0s) - 1))
-
-        try:
-            fit = Fit(p0=p0, fixed_parameters=fixed_parameters, **kwargs)
-            popts = fit.fit()
-            ys_fit = fit.calculate_fits(popts)
-            cod = fit.calculate_rss(ys_fit)
-        except ValueError:
-            popts = [{key: [float("nan")] for key in pkeys}]
-            cod = float("nan")
-
-        data_opt.append(popts[0])
-        data_init.append(utils.merge_dicts(p0, fixed_parameters[0]))
-        cods.append(cod)
-
-    data_opt = {key: np.array([p[key] for p in data_opt]) for key in data_opt[0]}
-    data_init = {key: np.array([p[key] for p in data_init]) for key in data_init[0]}
-
-    return data_opt, data_init, np.array(cods)

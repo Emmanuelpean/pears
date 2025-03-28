@@ -1,15 +1,41 @@
 """Models for simulating and fitting time-resolved photoluminescence and microwave conductivity data using the
-bimolecular-trapping and bimolecular-trapping-detrapping models"""
+bimolecular-trapping and bimolecular-trapping-detrapping models
+
+The classes are:
+- Model: defines common methods for all sub-models such as solving the rate equations, fitting data and calculating the
+  contributions. It also contains constants for all models such as parameter symbols. The rate_equations method defined
+  in subclasses need to have a **kwarg to allow parameters from the fitting optimisation to be used.
+    - BTModel: is the general class for the Bimolecular-Trapping model. It defines the rate_equations for this model as
+      well as calculate_trpl and calculate_trmc methods.
+        - BTModelTRPL: is the specific class for fitting TRPL using the BT model. it defines calculate_fit_quantity and
+          calculate_contributions which has a **kwarg to allow parameters from the fitting optimisation to be used.
+        - BTModelTRMC: is the specific class for fitting TRMC using the BT model. it defines calculate_fit_quantity and
+          calculate_contributions which has a **kwarg to allow parameters from the fitting optimisation to be used.
+    - BTDModel: is the general class for the Bimolecular-Trapping-Detrapping model. It defines the rate_equations for
+      this model as well as calculate_trpl and calculate_trmc.
+        - BTDModelTRPL: is the specific class for fitting TRPL using the BTD model. it defines calculate_fit_quantity
+          and calculate_contributions which has a **kwarg to allow parameters from the fitting optimisation to be used.
+        - BTDModelTRMC: is the specific class for fitting TRMC using the BTD model. it defines calculate_fit_quantity
+          and calculate_contributions which has a **kwarg to allow parameters from the fitting optimisation to be used.
+"""
 
 import itertools
-from collections.abc import Callable
 
 import numpy as np
 import scipy.integrate as sci
 import streamlit
 
-import fitting
-import utils
+from fitting import Fit
+from utility.dict import filter_dicts, list_to_dict, merge_dicts
+from utility.numbers import get_power_html, get_power_labels
+
+# Example parameters for the BT and BTD models
+BT_KWARGS = dict(k_B=50e-20, k_T=10e-3, k_A=1e-40, I=1.0, y_0=0, mu=10.0)
+BTD_KWARGS = dict(k_B=50e-20, k_T=12000e-20, N_T=60e12, p_0=65e12, k_D=80e-20, I=1.0, y_0=0.0, mu_e=20.0, mu_h=30.0)
+
+# Example photoexcited carrier concentrations
+BT_N0s = [1e15, 1e16, 1e17]
+BTD_N0s = [0.51e14, 1.61e14, 4.75e14, 16.1e14, 43.8e14]
 
 
 class Model(object):
@@ -23,6 +49,49 @@ class Model(object):
     CONC_LABELS_HTML = {"n_e": "n<sub>e</sub>", "n_t": "n<sub>t</sub>", "n_h": "n<sub>h</sub>", "n": "n"}
     CONC_COLORS = {"n_e": "red", "n_t": "green", "n_h": "blue", "n": "black"}
 
+    # Quantities display
+    PARAM_FULLNAME = {
+        "k_B": "Bimolecular recombination rate constant",
+        "k_T": "Trapping rate constant",
+        "k_D": "Detrapping rate constant",
+        "k_A": "Auger recombination rate constant",
+        "N_T": "Trap state concentration",
+        "p_0": "Doping concentration",
+        "y_0": "Intensity offset",
+        "I": "Intensity factor",
+        "mu": "Carrier mobility",
+        "mu_e": "Electron mobility",
+        "mu_h": "Hole mobility",
+    }
+
+    # Symbols display
+    PARAM_SYMBOLS = {
+        "k_B": "k_B",
+        "k_T": "k_T",
+        "k_D": "k_D",
+        "k_A": "k_A",
+        "N_T": "N_T",
+        "p_0": "p_0",
+        "y_0": "y_0",
+        "I": "I_0",
+        "mu": "mu",
+        "mu_e": "mu_e",
+        "mu_h": "mu_h",
+    }
+    PARAM_SYMBOLS_HTML = {
+        "N_T": "N<sub>T</sub>",
+        "p_0": "p<sub>0</sub>",
+        "k_B": "k<sub>B</sub>",
+        "k_T": "k<sub>T</sub>",
+        "k_D": "k<sub>D</sub>",
+        "k_A": "k<sub>A</sub>",
+        "y_0": "y<sub>0</sub>",
+        "I": "I<sub>0</sub>",
+        "mu": "&mu;",
+        "mu_e": "&mu;<sub>e</sub>",
+        "mu_h": "&mu;<sub>h</sub>",
+    }
+
     def __init__(
         self,
         param_ids: list[str],
@@ -33,12 +102,12 @@ class Model(object):
         gvalues: dict[str, float],
         gvalues_range: dict[str, list[float]],
         n_keys: list[str],
-        n_init: Callable,
+        n_init: callable,
         conc_ca_ids: list[str],
         param_filters: list[str],
     ):
         """Initializes the charge carrier recombination model with specified parameters.
-        :param param_ids: model parameter ids.
+        :param param_ids: model parameter ids required to calculate the fit quantity.
         :param units: dictionary mapping parameter ids to their units.
         :param units_html: dictionary mapping parameter ids to their HTML-formatted units.
         :param factors: dictionary mapping parameter ids to their factor for display purposes.
@@ -51,67 +120,28 @@ class Model(object):
         :param conc_ca_ids: list of carrier concentration keys used to determine stabilisation.
         :param param_filters: parameter relations used to filter the guess parameters combinations."""
 
-        self.s_display_keys = param_ids.copy()  # keys of single values used for display
-        self.units = utils.merge_dicts(units, {"y_0": "", "I": ""})
-        self.units_html = utils.merge_dicts(units_html, {"y_0": "", "I": ""})
-        self.factors = utils.merge_dicts(factors, {"y_0": 1.0, "I": 1.0})
-        self.fvalues = utils.merge_dicts(fvalues, {"y_0": 0.0, "I": 1.0})
-        self.gvalues = utils.merge_dicts(gvalues, {"y_0": 0.0, "I": 1.0})
-        self.gvalues_range = utils.merge_dicts(gvalues_range, {"y_0": [0.0], "I": [1.0]})
-        self.detached_parameters = ["y_0", "I"]
+        # Store the input arguments
         self.param_ids = param_ids
         self.n_keys = n_keys
         self.n_init = n_init
         self.conc_ca_ids = conc_ca_ids
         self.param_filters = param_filters
 
-        # Quantities display
-        self.quantities = {
-            "k_B": "Bimolecular recombination rate constant",
-            "k_T": "Trapping rate constant",
-            "k_D": "Detrapping rate constant",
-            "k_A": "Auger recombination rate constant",
-            "N_T": "Trap state concentration",
-            "p_0": "Doping concentration",
-            "y_0": "Intensity offset",
-            "I": "Intensity factor",
-            "mu": "Carrier mobility",
-            "mu_e": "Electron mobility",
-            "mu_h": "Hole mobility",
-        }
+        # Add the y_0 and I parameter units, factors, and default fixed values, guess values and guess value ranges
+        # and add them to the detached parameters
+        self.units = merge_dicts(units, {"y_0": "", "I": ""})
+        self.units_html = merge_dicts(units_html, {"y_0": "", "I": ""})
+        self.factors = merge_dicts(factors, {"y_0": 1.0, "I": 1.0})
+        self.fvalues = merge_dicts(fvalues, {"y_0": 0.0, "I": 1.0})
+        self.gvalues = merge_dicts(gvalues, {"y_0": 0.0, "I": 1.0})
+        self.gvalues_range = merge_dicts(gvalues_range, {"y_0": [0.0], "I": [1.0]})
+        self.detached_parameters = [k for k in ["y_0", "I"] if k in self.param_ids]
 
-        # Symbols display
-        self.symbols = {
-            "k_B": "k_B",
-            "k_T": "k_T",
-            "k_D": "k_D",
-            "k_A": "k_A",
-            "N_T": "N_T",
-            "p_0": "p_0",
-            "y_0": "y_0",
-            "I": "I_0",
-            "mu": "mu",
-            "mu_e": "mu_e",
-            "mu_h": "mu_h",
-        }
-        self.symbols_html = {
-            "N_T": "N<sub>T</sub>",
-            "p_0": "p<sub>0</sub>",
-            "k_B": "k<sub>B</sub>",
-            "k_T": "k<sub>T</sub>",
-            "k_D": "k<sub>D</sub>",
-            "k_A": "k<sub>A</sub>",
-            "y_0": "y<sub>0</sub>",
-            "I": "I<sub>0</sub>",
-            "mu": "&mu;",
-            "mu_e": "&mu;<sub>e</sub>",
-            "mu_h": "&mu;<sub>h</sub>",
-        }
+        # Only keep the data for the param ids
+        for d in ("units", "units_html", "factors", "fvalues", "gvalues", "gvalues_range"):
+            setattr(self, d, {key: value for key, value in getattr(self, d).items() if key in self.param_ids})
 
-        # symbol + unit
-        self.labels = {pkey: self.get_parameter_label(self.symbols[pkey], self.units[pkey]) for pkey in self.param_ids}
-        self.labels_i = {value: key for key, value in self.labels.items()}  # inverted dict for labels
-        self.factors_html = {key: utils.get_power_html(self.factors[key], None) for key in self.factors}
+        self.factors_html = {key: get_power_html(self.factors[key], None) for key in self.factors}
 
     def __eq__(self, other: any) -> bool:
         """Used to check if this object is the same as another object"""
@@ -125,19 +155,14 @@ class Model(object):
 
         return condition
 
-    @staticmethod
-    def get_parameter_label(
-        symbol: str,
-        unit: str,
-    ) -> str:
+    def get_parameter_label(self, key: str) -> str:
         """Get the parameter label
-        :param str symbol: symbol
-        :param str unit: unit"""
+        :param key: parameter id"""
 
-        if unit == "":
-            return symbol
+        if self.units[key] == "":
+            return self.PARAM_SYMBOLS[key]
         else:
-            return symbol + " (" + unit + ")"
+            return self.PARAM_SYMBOLS[key] + " (" + self.units[key] + ")"
 
     @property
     def fixed_values(self) -> dict[str, float]:
@@ -147,12 +172,12 @@ class Model(object):
 
     # -------------------------------------------------- CORE METHODS --------------------------------------------------
 
-    def rate_equations(self, *args, **kwargs) -> dict:
+    def _rate_equations(self, *args, **kwargs) -> dict:
         """Rate equation method"""
 
         return {}
 
-    def calculate_concentrations(
+    def _calculate_concentrations(
         self,
         t: np.ndarray,
         N_0: float,
@@ -173,7 +198,7 @@ class Model(object):
         def rate_equation(x, _t):
             """Rate equation wrapper"""
 
-            dndt = self.rate_equations(*x, **kwargs)
+            dndt = self._rate_equations(*x, **kwargs)
             return [dndt[key] for key in self.n_keys]
 
         for i in range(p):
@@ -203,7 +228,66 @@ class Model(object):
 
         return dict()
 
-    # ------------------------------------------------- FITTING METHODS ------------------------------------------------
+    def get_carrier_accumulation(
+        self,
+        params: list[dict[str, float]],
+        period: float,
+    ) -> list[float]:
+        """Calculate the carrier accumulation effect on the TRPL.
+        :param params: list of arguments passed to calculate_fit_quantity.
+        :param period: excitation repetition period in ns."""
+
+        nca = []
+
+        # For each decay fitted
+        for param in params:
+
+            # Create a new log timescale
+            x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
+
+            # Calculate the fit quantity after 1 pulse and until stabilisation
+            pulse1 = self.calculate_fit_quantity(x, **param)
+            pulse2 = self.calculate_fit_quantity(x, p=10000, **param)
+
+            # Calculate the normalised carrier accumulation in %
+            nca.append(np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100)
+
+        return nca
+
+    def get_carrier_concentrations(
+        self,
+        xs_data: list[np.ndarray],
+        params: list[dict[str, float]],
+        period: float,
+    ) -> tuple[list[np.ndarray], str, list[dict[str, np.ndarray]]]:
+        """Calculate the carrier concentrations from the optimised parameters.
+        :param xs_data: x-axis data.
+        :param params: list of arguments passed to calculate_concentrations.
+        :param period: excitation repetition period in ns."""
+
+        # If no period is provided, use the x-axis data provided and set the number of pulses to 1
+        if not period:
+            xaxis_data = xs_data
+            nb_pulses = 1
+            xlabel = "Time (ns)"
+
+        # If a period is provided, generate new x-axis data based on this period
+        else:
+            xs_data = [np.linspace(0, float(period), 1001)] * len(xs_data)
+            nb_pulses = 100
+            xaxis_data = [np.linspace(0, nb_pulses, len(x_data) * nb_pulses) for x_data in xs_data]
+            xlabel = "Pulse"
+
+        concentrations = []
+
+        # For each x-axis data and parameter values, calculate the concentration after a certain number of pulses
+        for x_data, param in zip(xs_data, params):
+            concentration = self._calculate_concentrations(x_data, p=nb_pulses, **param)
+            concentrations.append({key: np.concatenate(concentration[key]) for key in concentration})
+
+        return xaxis_data, xlabel, concentrations
+
+    # ----------------------------------------------------- FITTING ----------------------------------------------------
 
     def fit(
         self,
@@ -212,7 +296,6 @@ class Model(object):
         N0s: list[float],
         p0: None | dict[str, float] = None,
     ) -> dict:
-        # noinspection PyUnresolvedReferences
         """Fit the data using the model
         :param xs_data: list-like of x data
         :param ys_data: list-like of y data
@@ -220,127 +303,81 @@ class Model(object):
         :param p0: guess values. If None, use the gvalues dict"""
 
         # Add the initial carrier concentration to the fixed parameters and get the guess values
-        fparams = [utils.merge_dicts(self.fixed_values, dict(N_0=n0)) for n0 in N0s]
+        fixed_parameters = [merge_dicts(self.fixed_values, dict(N_0=n0)) for n0 in N0s]
         if p0 is None:
             p0 = self.gvalues
 
         # Fitting
-        fit = fitting.Fit(xs_data, ys_data, self.calculate_fit_quantity, p0, self.detached_parameters, fparams)
+        fit = Fit(xs_data, ys_data, self.calculate_fit_quantity, p0, self.detached_parameters, fixed_parameters)
 
         # Popts, fitted data, R2
         popts = fit.fit()
         fit_ydata = fit.calculate_fits(popts)
         cod = fit.calculate_rss(fit_ydata)
-        popt = utils.keep_function_kwargs(self.rate_equations, popts[0])  # optimised values
-        p0 = utils.keep_function_kwargs(self.rate_equations, utils.merge_dicts(p0, self.fixed_values))  # guess values
 
-        # Popts full labels
-        labels = []
+        popts_labels = []
         for key in self.param_ids:
-            fstring = " (fixed)" if key in fparams[0] else ""  # add 'fixed' if parameter is fixed
-            if key in self.s_display_keys:
-                data = popts[0][key] / self.factors[key]
-                label = (
-                    f"{self.quantities[key]} ({self.symbols_html[key]}): {data:.5f} &#10005; "
-                    f"{self.factors_html[key]} {self.units_html[key]}{fstring}"
-                )
+
+            # Generate the label for that parameter
+            if key in self.detached_parameters:
+                data = ["%.5f" % (popt[key] / self.factors[key]) for popt in popts]
+                value_string = ", ".join(data)
             else:
-                data = ["%.5f" % popt[key] for popt in popts]
-                label = f"{self.quantities[key]} ({self.symbols_html[key]}): {', '.join(data)}{fstring}"
-            labels.append(label)
-        labels.append("Coefficient of determination R<sup>2</sup>: " + str(cod))
+                value_string = "%.5f" % (popts[0][key] / self.factors[key])
+            label = (
+                f"{self.PARAM_FULLNAME[key]} ({self.PARAM_SYMBOLS_HTML[key]}): {value_string} "
+                f"{self.factors_html[key]} {self.units_html[key]}"
+            )
+
+            # Add (fixed) if the parameter was fixed
+            if key in fixed_parameters[0]:
+                label += " (fixed)"
+
+            popts_labels.append(label)
+
+        popts_labels.append(f"Coefficient of determination R<sup>2</sup>: {cod:.5f}")
 
         # Contributions
         contributions = []
-        for x_data, p in zip(xs_data, popts):
-            concentration = {key: value[0] for key, value in self.calculate_concentrations(x_data, **p).items()}
-            kwargs = utils.merge_dicts(p, concentration)
-            contributions.append(
-                {self.CBT_LABELS[key]: value for key, value in self.calculate_contributions(x_data, **kwargs).items()}
-            )
-        contributions = utils.list_to_dict(contributions)
+        for x_data, popt in zip(xs_data, popts):
+            concentration = {key: value[0] for key, value in self._calculate_concentrations(x_data, **popt).items()}
+            kwargs = merge_dicts(popt, concentration)
+            contributions.append(self.calculate_contributions(x_data, **kwargs))
+        contributions = list_to_dict(contributions)
+        contributions = {key: np.array(value) for key, value in contributions.items()}
 
-        # All values (guess, optimised, R2 and contributions)
-        values = dict()
-        no_disp_keys = []
-        for key in popt:
-            label = self.symbols_html[key] + " (" + self.factors_html[key] + " " + self.units_html[key] + ")"
-            if key in fparams[0]:
-                values[label + " (fixed)"] = p0[key] / self.factors[key]
-                no_disp_keys.append(label + " (fixed)")
+        # All values together (guess, optimised, R2 and contributions)
+        all_values = dict()  # all values
+        hidden_keys = []  # keys not displayed in the parallel plot (fixed values and guess values)
+        for key in self.param_ids:
+            if key in self.detached_parameters:
+                continue
+            label = self.PARAM_SYMBOLS_HTML[key] + " (" + self.factors_html[key] + " " + self.units_html[key] + ")"
+            if key in fixed_parameters[0]:
+                all_values[label + " (fixed)"] = fixed_parameters[0][key] / self.factors[key]
+                hidden_keys.append(label + " (fixed)")
             else:
-                values[label + " (guess)"] = p0[key] / self.factors[key]
-                values[label + " (opt.)"] = popt[key] / self.factors[key]
-                no_disp_keys.append(label + " (guess)")
-        values["R<sub>2</sub>"] = cod
+                all_values[label + " (guess)"] = p0[key] / self.factors[key]
+                all_values[label + " (opt.)"] = popts[0][key] / self.factors[key]
+                hidden_keys.append(label + " (guess)")
+        all_values["R<sub>2</sub>"] = cod
         for key in contributions:
-            values["max. " + key] = np.max(contributions[key])
+            all_values["max. " + self.CBT_LABELS[key]] = np.max(contributions[key])
 
         return {
             "popts": popts,
-            "popt": popt,
             "cod": cod,
             "contributions": contributions,
             "fit_ydata": fit_ydata,
-            "labels": labels,
-            "N0s_labels": utils.get_power_labels(N0s),
+            "popt_labels": popts_labels,
+            "N0s": N0s,  # keep a copy of the N0s used for the fits
+            "N0s_labels": get_power_labels(N0s),
             "p0": p0,
-            "N0s": N0s,
-            "values": values,
-            "no_disp_keys": no_disp_keys,
+            "all_values": all_values,
+            "hidden_keys": hidden_keys,
             "xs_data": xs_data,
             "ys_data": ys_data,
         }
-
-    def get_carrier_accumulation(
-        self,
-        popts: list[dict[str, float]],
-        N0s: list[float],
-        period: float,
-    ) -> dict[str, float]:
-        """Calculate the carrier accumulation effect on the TRPL
-        :param popts: list of optimised parameters
-        :param N0s: initial carrier concentrations
-        :param period: excitation repetition period"""
-
-        labels = utils.get_power_labels(N0s)
-        nca = dict()
-        for label, popt, key in zip(labels, popts, N0s):
-            x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
-            pulse1 = self.calculate_fit_quantity(x, **popt)
-            pulse2 = self.calculate_fit_quantity(x, p=1000, **popt)
-            nca[label] = np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100
-        return nca
-
-    def get_carrier_concentrations(
-        self,
-        xs_data: list[np.ndarray],
-        popts: list[dict[str, float]],
-        period: str | float,
-    ) -> tuple[list[np.ndarray], str, list[dict[str, np.ndarray]]]:
-        """Calculate the carrier concentrations from the optimised parameters
-        :param xs_data: x-axis data
-        :param popts: list of optimised parameters
-        :param period: excitation repetition period in ns"""
-
-        # Carrier concentrations
-        if period == "":
-            x_pulse = x = xs_data
-            nb_pulses = 1
-            xlabel = "Time (ns)"
-        else:
-            x = np.array([np.linspace(0, float(period), 1001)] * len(xs_data))
-            nb_pulses = 100
-            x_pulse = [np.linspace(0, nb_pulses, len(x_) * nb_pulses) for x_ in x]
-            xlabel = "Pulse"
-
-        concentrations = []
-        for x_data, popt in zip(x, popts):
-            kwargs = {key: popt[key] for key in popt if key not in ("I", "y_0")}
-            concentration = self.calculate_concentrations(x_data, p=nb_pulses, **kwargs)
-            concentrations.append({key: np.concatenate(concentration[key]) for key in concentration})
-
-        return x_pulse, xlabel, concentrations
 
     def grid_fitting(
         self,
@@ -359,7 +396,7 @@ class Model(object):
         # Generate all the combination of guess values and filter them
         pkeys, pvalues = zip(*p0s.items())
         all_p0s = [dict(zip(pkeys, v)) for v in itertools.product(*pvalues)]
-        all_p0s = utils.filter_dicts(all_p0s, self.param_filters, self.fixed_values)
+        all_p0s = filter_dicts(all_p0s, self.param_filters, self.fixed_values)
 
         # Run the fits
         fits = []
@@ -377,12 +414,14 @@ class Model(object):
 
         return fits
 
+    # -------------------------------------------------- CONTRIBUTIONS -------------------------------------------------
+
     @staticmethod
-    def get_rec_string(
+    def get_contribution_recommendation(
         process: str,
         val: str = "",
     ) -> str:
-        """Get the recommendation string for the contributions
+        """Get the recommendation string for the given contribution
         :param str process: name of the process
         :param str val: 'higher' or 'lower'"""
 
@@ -393,6 +432,43 @@ class Model(object):
                 "significant"
             )
         return string
+
+    def get_contribution_recommendations(self, *args, **kwargs) -> list[str]:
+        """Placeholder: get recommendations for the contributions"""
+
+        return [""]
+
+    # ----------------------------------------------------- OTHERS -----------------------------------------------------
+
+    def _generate_decays(
+        self,
+        period: float,
+        N0s: list[float],
+        parameters: dict[str, float],
+        noise: float = 0.0,
+        normalise: bool = False,
+        **kwargs,
+    ) -> tuple[list[np.ndarray], list[np.ndarray], list[float]]:
+        """Generate example TRMC decays
+        :param period: period in ns
+        :param N0s: photoexcited carrier concentrations
+        :param parameters: parameters used to solve the differential equations
+        :param noise: optional noise argument
+        :param kwargs: keyword arguments passed to the calculate_fit_quantity method
+        :param normalise: if True, normalise the data after adding the noise"""
+
+        t = np.linspace(0, period, 1001)
+        xs_data = [t] * len(N0s)
+        ys_data = [self.calculate_fit_quantity(t, N_0=n, **merge_dicts(kwargs, parameters)) for n in N0s]
+        if noise:
+            np.random.seed(1537)
+            for y in ys_data:
+                noise_array = np.random.normal(loc=0.0, scale=noise * np.max(y), size=len(y))
+                y += noise_array
+                if normalise:
+                    y /= np.max(y)
+
+        return xs_data, ys_data, N0s
 
 
 # ------------------------------------------------------ BT MODEL ------------------------------------------------------
@@ -460,7 +536,7 @@ class BTModel(Model):
         )
 
     @staticmethod
-    def rate_equations(
+    def _rate_equations(
         n: float,
         k_T: float,
         k_B: float,
@@ -471,35 +547,12 @@ class BTModel(Model):
         :param n: carrier concentration (cm-3)
         :param k_T: trapping rate (ns-1)
         :param k_B: bimolecular recombination rate (cm3/ns)
-        :param k_A: Auger recombination rate (cm6/ns)"""
+        :param k_A: Auger recombination rate (cm6/ns)
+        :param kwargs: additional keyword arguments that are ignored"""
 
         return {"n": -k_T * n - k_B * n**2 - k_A * n**3}
 
-    def get_recommendations(
-        self,
-        contributions: dict[str, np.ndarray],
-        threshold: float = 10.0,
-    ) -> list[str]:
-        """Get recommendations for the contributions"""
-
-        recs = []
-        for key in contributions:
-            if np.max(contributions[key]) < threshold:
-                if "Trapping" in key and self.fvalues.get("k_T", 1) != 0:
-                    recs.append(self.get_rec_string("trapping", "lower"))
-                elif "Bimolecular" in key and self.fvalues.get("k_B", 1) != 0:
-                    recs.append(self.get_rec_string("bimolecular", "higher"))
-                elif "Auger" in key and self.fvalues.get("k_A", 1) != 0:
-                    recs.append(self.get_rec_string("Auger", "higher"))
-        return recs
-
-
-class BTModelTRPL(BTModel):
-
-    def __init__(self):
-        BTModel.__init__(self, ["k_T", "k_B", "k_A", "y_0", "I"])
-
-    def calculate_fit_quantity(
+    def calculate_trpl(
         self,
         t: np.ndarray,
         N_0: float,
@@ -507,16 +560,64 @@ class BTModelTRPL(BTModel):
         y_0: float,
         **kwargs,
     ) -> np.ndarray:
-        """Calculate the normalised TRPL intensity using the BT model
+        """Calculate the normalised TRPL intensity
         :param t: time (ns)
         :param N_0: initial carrier concentration
         :param y_0: background intensity
         :param I: amplitude factor
         :param kwargs: keyword arguments passed to the calculate_concentrations function"""
 
-        n = self.calculate_concentrations(t, N_0, **kwargs)["n"][-1]
+        n = self._calculate_concentrations(t, N_0, **kwargs)["n"][-1]
         I_TRPL = n**2 / N_0
         return I * I_TRPL / I_TRPL[0] + y_0
+
+    def calculate_trmc(
+        self,
+        t: np.ndarray,
+        N_0: float,
+        mu: float,
+        y_0: float,
+        **kwargs,
+    ) -> np.ndarray:
+        """Calculate the TRMC intensity
+        :param t: time (ns)
+        :param N_0: initial carrier concentration
+        :param mu: carrier mobility (cm2/vs)
+        :param y_0: background intensity
+        :param kwargs: keyword arguments passed to the calculate_concentrations function"""
+
+        n = self._calculate_concentrations(t, N_0, **kwargs)["n"][-1]
+        return (2 * mu * n) / N_0 + y_0
+
+    def get_contribution_recommendations(
+        self,
+        contributions: dict[str, np.ndarray],
+        threshold: float = 10.0,
+    ) -> list[str]:
+        """Get recommendations for the contributions
+        :param contributions: dictionary associating contribution key to their values
+        :param threshold: threshold below which a warning is given"""
+
+        recommendations = []
+        for key in contributions:
+            if np.max(contributions[key]) < threshold:
+                if key == "T" and self.fvalues.get("k_T", 1) != 0:
+                    recommendations.append(self.get_contribution_recommendation("trapping", "lower"))
+                elif key == "B" and self.fvalues.get("k_B", 1) != 0:
+                    recommendations.append(self.get_contribution_recommendation("bimolecular", "higher"))
+                elif key == "A" and self.fvalues.get("k_A", 1) != 0:
+                    recommendations.append(self.get_contribution_recommendation("Auger", "higher"))
+        return recommendations
+
+
+class BTModelTRPL(BTModel):
+
+    def __init__(self):
+        BTModel.__init__(self, ["k_T", "k_B", "k_A", "y_0", "I"])
+
+    def calculate_fit_quantity(self, *args, **kwargs):
+
+        return self.calculate_trpl(*args, **kwargs)
 
     @staticmethod
     def calculate_contributions(
@@ -540,24 +641,22 @@ class BTModelTRPL(BTModel):
         S = T + B + A
         return {"T": T / S * 100, "B": B / S * 100, "A": A / S * 100}
 
+    def generate_decays(self, *args, **kwargs):
+        """Generate decays.
+        :param args: arguments passed to _generate_decays.
+        :param kwargs: keyword arguments passed to _generate_decays."""
+
+        return self._generate_decays(250.0, BT_N0s, BT_KWARGS, normalise=True, *args, **kwargs)
+
 
 class BTModelTRMC(BTModel):
 
     def __init__(self):
         BTModel.__init__(self, ["k_T", "k_B", "k_A", "mu", "y_0"])
 
-    def calculate_fit_quantity(
-        self,
-        t: np.ndarray,
-        N_0: float,
-        mu: float,
-        y_0: float,
-        **kwargs,
-    ) -> np.ndarray:
-        """Calculate the TRMC intensity"""
+    def calculate_fit_quantity(self, *args, **kwargs):
 
-        n = self.calculate_concentrations(t, N_0, **kwargs)["n"][-1]
-        return (2 * mu * n) / N_0 + y_0
+        return self.calculate_trmc(*args, **kwargs)
 
     @staticmethod
     def calculate_contributions(
@@ -582,6 +681,13 @@ class BTModelTRMC(BTModel):
         A = sci.trapezoid(2 * mu * k_A * n**3, t)
         S = T + B + A
         return {"T": T / S * 100, "B": B / S * 100, "A": A / S * 100}
+
+    def generate_decays(self, *args, **kwargs):
+        """Generate decays.
+        :param args: arguments passed to _generate_decays.
+        :param kwargs: keyword arguments passed to _generate_decays."""
+
+        return self._generate_decays(1000.0, BT_N0s, BT_KWARGS, *args, **kwargs)
 
 
 # ------------------------------------------------------ BTD MODEL -----------------------------------------------------
@@ -643,8 +749,8 @@ class BTDModel(Model):
             "k_D": [1e-20, 1e-18],
             "p_0": [1e12, 1e14],
             "N_T": [1e12, 1e14],
-            "mu_e": [1, 10],
-            "mu_h": [1, 10],
+            "mu_e": [10],
+            "mu_h": [10],
         }
         n_keys = ["n_e", "n_t", "n_h"]  # need to be ordered same way as rate_equations input
         n_init = lambda N_0: {"n_e": N_0, "n_t": 0, "n_h": N_0}
@@ -666,7 +772,7 @@ class BTDModel(Model):
         )
 
     @staticmethod
-    def rate_equations(
+    def _rate_equations(
         n_e: float,
         n_t: float,
         n_h: float,
@@ -695,7 +801,50 @@ class BTDModel(Model):
         dnh_dt = -B - D
         return {"n_e": dne_dt, "n_t": dnt_dt, "n_h": dnh_dt}
 
-    def get_recommendations(
+    def calculate_trpl(
+        self,
+        t: np.ndarray,
+        N_0: float,
+        p_0: float,
+        I: float,
+        y_0: float,
+        **kwargs,
+    ) -> np.ndarray:
+        """Calculate the normalised TRPL intensity
+        :param t: time (ns)
+        :param N_0: initial carrier concentration (cm-3)
+        :param y_0: background intensity
+        :param p_0: doping concentration (cm-3)
+        :param I: amplitude factor
+        :param kwargs: keyword arguments passed to the calculate_concentrations function"""
+
+        n = self._calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
+        I_TRPL = n["n_e"][-1] * (n["n_h"][-1] + p_0) / N_0
+        return I * I_TRPL / I_TRPL[0] + y_0
+
+    def calculate_trmc(
+        self,
+        t: np.ndarray,
+        N_0: float,
+        p_0: float,
+        mu_e: float,
+        mu_h: float,
+        y_0: float,
+        **kwargs,
+    ) -> np.ndarray:
+        """Calculate the normalised TRPL intensity
+        :param t: time (ns)
+        :param N_0: initial carrier concentration (cm-3)
+        :param y_0: background intensity
+        :param p_0: doping concentration (cm-3)
+        :param mu_e: electron mobility (cm2/Vs)
+        :param mu_h: hole mobility (cm2/Vs)
+        :param kwargs: keyword arguments passed to the calculate_concentrations function"""
+
+        n = self._calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
+        return (mu_e * n["n_e"][-1] + mu_h * n["n_h"][-1]) / N_0 + y_0
+
+    def get_contribution_recommendations(
         self,
         contributions: dict[str, np.ndarray],
         threshold: float = 10.0,
@@ -707,15 +856,15 @@ class BTDModel(Model):
         recs = []
         for key in contributions:
             if np.max(contributions[key]) < threshold:
-                if "Bimolecular" in key and self.fvalues.get("k_B", 1) != 0:
-                    recs.append(self.get_rec_string("bimolecular", "higher"))
-                elif "Trapping" in key and self.fvalues.get("k_T", 1) != 0 and self.fvalues.get("N_T", 1) != 0:
-                    recs.append(self.get_rec_string("trapping", "lower"))
-                elif "Detrapping" in key and self.fvalues.get("k_D", 1) != 0:
-                    recs.append(self.get_rec_string("detrapping"))
+                if key == "B" and self.fvalues.get("k_B", 1) != 0:
+                    recs.append(self.get_contribution_recommendation("bimolecular", "higher"))
+                elif key == "T" and self.fvalues.get("k_T", 1) != 0 and self.fvalues.get("N_T", 1) != 0:
+                    recs.append(self.get_contribution_recommendation("trapping", "lower"))
+                elif key == "D" and self.fvalues.get("k_D", 1) != 0:
+                    recs.append(self.get_contribution_recommendation("detrapping"))
         recs.append(
-            "Note: For the bimolecular-trapping-detrapping model, although a low contribution suggests that the"
-            " parameter associated with the process are not be accurate, a non-negligible contribution does not "
+            "Note: For the bimolecular-trapping-detrapping model, although a low contribution suggests that the "
+            "parameter associated with the process are not be accurate, a non-negligible contribution does not "
             "automatically indicate that the parameters retrieved are accurate due to the complex nature of the "
             "model. It is recommended to perform a grid fitting analysis with this model."
         )
@@ -727,26 +876,9 @@ class BTDModelTRPL(BTDModel):
     def __init__(self):
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "y_0", "I"])
 
-    def calculate_fit_quantity(
-        self,
-        t: np.ndarray,
-        N_0: float,
-        I: float,
-        y_0: float,
-        p_0: float,
-        **kwargs,
-    ) -> np.ndarray:
-        """Calculate the normalised TRPL intensity
-        :param t: time (ns)
-        :param N_0: initial carrier concentration (cm-3)
-        :param y_0: background intensity
-        :param p_0: doping concentration (cm-3)
-        :param I: amplitude factor
-        :param kwargs: keyword arguments passed to the calculate_concentrations function"""
+    def calculate_fit_quantity(self, *args, **kwargs):
 
-        n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
-        I_TRPL = n["n_e"][-1] * (n["n_h"][-1] + p_0) / N_0
-        return I * I_TRPL / I_TRPL[0] + y_0
+        return self.calculate_trpl(*args, **kwargs)
 
     @staticmethod
     def calculate_contributions(
@@ -778,33 +910,22 @@ class BTDModelTRPL(BTDModel):
         S = T + B + D
         return {"T": T / S * 100, "B": B / S * 100, "D": D / S * 100}
 
+    def generate_decays(self, *args, **kwargs):
+        """Generate decays.
+        :param args: arguments passed to _generate_decays.
+        :param kwargs: keyword arguments passed to _generate_decays."""
+
+        return self._generate_decays(10e3, BTD_N0s, BTD_KWARGS, normalise=True, *args, **kwargs)
+
 
 class BTDModelTRMC(BTDModel):
 
     def __init__(self):
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "mu_e", "mu_h", "y_0"])
 
-    def calculate_fit_quantity(
-        self,
-        t: np.ndarray,
-        N_0: float,
-        mu_e: float,
-        mu_h: float,
-        y_0: float,
-        p_0: float,
-        **kwargs,
-    ) -> np.ndarray:
-        """Calculate the normalised TRPL intensity
-        :param t: time (ns)
-        :param N_0: initial carrier concentration (cm-3)
-        :param y_0: background intensity
-        :param p_0: doping concentration (cm-3)
-        :param mu_e: electron mobility (cm2/Vs)
-        :param mu_h: hole mobility (cm2/Vs)
-        :param kwargs: keyword arguments passed to the calculate_concentrations function"""
+    def calculate_fit_quantity(self, *args, **kwargs):
 
-        n = self.calculate_concentrations(t, N_0, p_0=p_0, **kwargs)
-        return (mu_e * n["n_e"][-1] + mu_h * n["n_h"][-1]) / N_0
+        return self.calculate_trmc(*args, **kwargs)
 
     @staticmethod
     def calculate_contributions(
@@ -840,8 +961,15 @@ class BTDModelTRMC(BTDModel):
         S = T + B + D
         return {"T": T / S * 100, "B": B / S * 100, "D": D / S * 100}
 
+    def generate_decays(self, *args, **kwargs):
+        """Generate decays.
+        :param args: arguments passed to _generate_decays.
+        :param kwargs: keyword arguments passed to _generate_decays."""
+
+        return self._generate_decays(50e3, BTD_N0s, BTD_KWARGS, *args, **kwargs)
+
 
 models = {
-    "Bimolecular-Trapping-Auger": {"TRPL": BTModelTRPL(), "TRMC": BTModelTRMC()},
-    "Bimolecular-Trapping-Detrapping": {"TRPL": BTDModelTRPL(), "TRMC": BTDModelTRMC()},
+    "BTA": {"TRPL": BTModelTRPL(), "TRMC": BTModelTRMC()},
+    "BTD": {"TRPL": BTDModelTRPL(), "TRMC": BTDModelTRMC()},
 }

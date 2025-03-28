@@ -14,7 +14,12 @@ import streamlit as st
 import models
 import plot
 import resources
-import utils
+from utility.data import are_identical, load_data, matrix_to_string, process_data, render_image
+from utility.numbers import get_power_labels, to_scientific
+
+__version__ = "0.4.0"
+__date__ = "9th May 2022"
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
@@ -38,10 +43,6 @@ if "period" not in st.session_state:
     st.session_state.period = ""  # excitation repetition period
 if "carrier_accumulation" not in st.session_state:
     st.session_state.carrier_accumulation = None  # carrier accumulation
-if "preprocess" not in st.session_state:
-    st.session_state.preprocess = False
-if "file" not in st.session_state:
-    st.session_state.file = None
 
 
 def reset_all():
@@ -53,12 +54,23 @@ def reset_all():
     st.session_state.ran = False
 
 
+# Change the default style
+@st.cache_resource
+def set_style():
+    """Set the default style"""
+
+    with open(resources.CSS_STYLE_PATH) as ofile:
+        st.markdown(f"<style>{ofile.read()}</style>", unsafe_allow_html=True)
+
+
+set_style()
+
 # ----------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------- INPUT -------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
 logo_placeholder = st.empty()
-st.sidebar.markdown(utils.render_image(resources.LOGO_PATH, 20), unsafe_allow_html=True)  # sidebar logo
+st.sidebar.markdown(render_image(resources.LOGO_PATH, 20), unsafe_allow_html=True)  # sidebar logo
 info_message = st.empty()
 
 # -------------------------------------------------------- MODES -------------------------------------------------------
@@ -92,11 +104,11 @@ data_format = st.sidebar.radio(
 data_delimiter_help = """Data delimiter. tab/space cannot be used if the file has missing data."""
 data_delimiter = st.sidebar.radio(
     label="Data delimiter",
-    options=[None, ",", ";"],
+    options=[",", None, ";"],
     help=data_delimiter_help,
     key="data_delimiter",
     horizontal=True,
-    format_func=lambda v: {None: "tab/space", ",": ",", ";": ";"}[v],
+    format_func=lambda v: {None: "tab/space", ",": "comma", ";": "semicolon"}[v],
 )
 
 # Quantity
@@ -124,7 +136,7 @@ data_message = st.empty()
 xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
-        xs_data, ys_data = utils.load_data(input_filename.getvalue(), data_delimiter, data_format)
+        xs_data, ys_data = load_data(input_filename.getvalue(), data_delimiter, data_format)
 
         # Check consistency
         if len(xs_data) != len(ys_data):
@@ -135,7 +147,7 @@ if input_filename is not None:
 
         # Process the data
         if process_input:
-            xs_data, ys_data = utils.process_data(xs_data, ys_data, quantity_input == "TRPL")
+            xs_data, ys_data = process_data(xs_data, ys_data, quantity_input == "TRPL")
 
         data_message.success("Data successfully loaded")
 
@@ -147,14 +159,14 @@ else:
     data_message.info("Load a data file")
 
 # Reset the results and display if the new data are different from the new ones
-diff_cond1 = not utils.are_lists_identical(xs_data, st.session_state.data[0])
-diff_cond2 = not utils.are_lists_identical(ys_data, st.session_state.data[1])
+diff_cond1 = not are_identical(xs_data, st.session_state.data[0])
+diff_cond2 = not are_identical(ys_data, st.session_state.data[1])
 if diff_cond1 or diff_cond2:
     reset_all()
     st.session_state.data = [xs_data, ys_data]
 
 if st.session_state.data[0] == [None]:
-    logo_placeholder.markdown(utils.render_image(resources.LOGO_TEXT_PATH, 50), unsafe_allow_html=True)  # main logo
+    logo_placeholder.markdown(render_image(resources.LOGO_TEXT_PATH, 50), unsafe_allow_html=True)  # main logo
 
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
 
@@ -179,7 +191,9 @@ if xs_data[0] is not None:
         except ValueError:
             fluence_message.error("Uh-oh! The initial carrier concentrations input is not valid")
 
+
 # --------------------------------------------------- MODEL SELECTION --------------------------------------------------
+
 
 model, model_name = None, ""
 if N0s is not None:
@@ -190,16 +204,19 @@ if N0s is not None:
         list(st.session_state.models),
         help=model_help,
         key="model_name_",
+        format_func=lambda v: {"BTD": "Bimolecular-Trapping-Detrapping", "BTA": "Bimolecular-Trapping-Auger"}[v],
     )
-    model = st.session_state.models[model_name][quantity_input]
+    model: models.Model | None = st.session_state.models[model_name][quantity_input]
+
 
 # ------------------------------------------------ FIXED & GUESS VALUES ------------------------------------------------
+
 
 if N0s is not None:
     param_key = st.sidebar.selectbox(
         "Parameters",
         model.param_ids,
-        format_func=lambda k: model.labels[k],
+        format_func=model.get_parameter_label,
         key="param_key_",
     )
 
@@ -208,7 +225,7 @@ if N0s is not None:
     key = model_name + param_key + "fixed"
 
     if key not in st.session_state:
-        st.session_state[key] = utils.to_scientific(model.fvalues[param_key])
+        st.session_state[key] = to_scientific(model.fvalues[param_key])
 
     # Display the fixed value
     fvalue_help = "Fixed values for the selected parameter. If not a number, use the guess value below for the fitting."
@@ -234,13 +251,12 @@ if N0s is not None:
 
             key = model_name + param_key + "guess"
             if key not in st.session_state:
-                st.session_state[key] = utils.to_scientific(model.gvalues[param_key])
+                st.session_state[key] = to_scientific(model.gvalues[param_key])
 
             # Display the guess value
-            gvalue_help = "Parameter initial guess value for the fitting."
             gvalue = st.sidebar.text_input(
                 "Guess value",
-                help=gvalue_help,
+                help="Parameter initial guess value for the fitting.",
                 key=model_name + param_key + "guess",
             )
 
@@ -255,13 +271,12 @@ if N0s is not None:
 
             key = model_name + param_key + "guesses"
             if key not in st.session_state:
-                st.session_state[key] = utils.to_scientific(model.gvalues_rangev[param_key])
+                st.session_state[key] = to_scientific(model.gvalues_range[param_key])
 
             # Display the guess values
-            gvalue_help = "Enter multiple initial guess values, separated with commas."
             gvalues = st.sidebar.text_input(
                 "Guess values",
-                help=gvalue_help,
+                help="Enter multiple initial guess values, separated with commas.",
                 key=key,
             )
 
@@ -273,7 +288,7 @@ if N0s is not None:
 
 # ------------------------------------------------- REPETITION PERIOD --------------------------------------------------
 
-period = ""
+period = 0.0
 if N0s is not None:
     period_help = """Excitation repetition period. Used to calculate possible carrier accumulation between 
     consecutive excitation pulses."""
@@ -286,7 +301,7 @@ if N0s is not None:
     try:
         period = float(period)
     except ValueError:
-        period = ""
+        pass
 
 # ----------------------------------------------------- RUN BUTTON -----------------------------------------------------
 
@@ -309,67 +324,74 @@ if st.session_state.ran:
     data_message.empty()
     fluence_message.empty()
 
-    # -------------------------------------------------- FITTING MODE --------------------------------------------------
+    # ----------------------------------------------------- FITTING ----------------------------------------------------
 
+    # If the run button has been clicked
     if run_button:
         info_message.info("Processing")
         if fit_mode == resources.FITTING_MODE:
             try:
                 print("Calling fitting")
-                variable = model.fit(xs_data, ys_data, N0s)
-                st.session_state.results = copy.deepcopy([variable, model, N0s])
+                fit_output = model.fit(xs_data, ys_data, N0s)
+                st.session_state.results = copy.deepcopy([fit_output, model, N0s])
             except ValueError:
-                info_message.error("Uh Oh, could not fit the data. Try changing the parameter guess values.")
+                info_message.error("Uh Oh, the data could not be fitted. Try changing the parameter guess values.")
                 raise AssertionError("Fit failed")
         else:
             progressbar = st.sidebar.progress(0)
-            st.session_state.period = ""  # force reset
-            variable = model.grid_fitting(progressbar, N0s, xs_data=xs_data, ys_data=ys_data)
-            st.session_state.results = copy.deepcopy([variable, model, N0s])
+            st.session_state.period = ""  # force reset  # TODO review
+            fit_output = model.grid_fitting(progressbar, N0s, xs_data=xs_data, ys_data=ys_data)
+            st.session_state.results = copy.deepcopy([fit_output, model, N0s])
         info_message.empty()
+
+    # Retrieve the fit output, model and carrier concentrations from the session state
     else:
+        # Check if the model settings or the carrier concentrations have changed
         if st.session_state.results[1] != model or st.session_state.results[2] != N0s:
-            info_message.warning('You have changed some of the input settings. Press "run" to apply the changes')
-        variable, model, N0s = st.session_state.results
+            info_message.warning('You have changed some of the input settings. Press "Run" to apply the changes')
+        fit_output, model, N0s = st.session_state.results
+
+    # ---------------------------------------------- CARRIER ACCUMULATION ----------------------------------------------
+
+    nca = None
+    if period:
+        if period != st.session_state.period:  # if period is changed
+            print("Calculating CA")
+            if isinstance(fit_output, list):
+                nca = [model.get_carrier_accumulation(fit["popts"], period) for fit in fit_output]
+            else:
+                nca = model.get_carrier_accumulation(fit_output["popts"], period)
+            st.session_state.carrier_accumulation = nca
+            st.session_state.period = period  # store the period used to calculate the CA
+        else:
+            print("Getting stored CA")
+            nca = st.session_state.carrier_accumulation
+    else:  # reset the store CA and period
+        st.session_state.carrier_accumulation = None
+        st.session_state.period = period
+
+    # -------------------------------------------------- PARALLEL PLOT -------------------------------------------------
 
     with results_container.container():
 
         if fit_mode == resources.FITTING_MODE:
-            fit = variable
+            fit = fit_output
         else:
             st.subheader("Parallel plot")
 
-            # Calculate the carrier accumulation
-            CA = None
-            if period:
-                if period != st.session_state.period:  # if period is changed
-                    print("Calculating CA")
-                    CA = [model.get_carrier_accumulation(fit["popts"], fit["N0s"], period) for fit in variable]
-                    st.session_state.carrier_accumulation = CA
-                    st.session_state.period = period  # store the period used to calculate the CA
-                else:
-                    print("Getting stored CA")
-                    CA = st.session_state.carrier_accumulation
-            else:  # reset the store CA and period
-                st.session_state.carrier_accumulation = None
-                st.session_state.period = period
-
             # Add the CA to the values
             popts = []
-            for i in range(len(variable)):
-                popt = variable[i]["values"].copy()
-                if CA is not None:
-                    popt["Max. CA (%)"] = np.max(list(CA[i].values()))
+            for i in range(len(fit_output)):
+                popt = fit_output[i]["all_values"].copy()
+                if nca is not None:
+                    popt["Max. CA (%)"] = np.max(nca[i])
+
                 popts.append(popt)
 
             # Display the parallel plot
-            xp = plot.parallel_plot(
-                popts,
-                variable[0]["no_disp_keys"],
-                [k for k in variable[0]["values"].keys() if k not in variable[0]["no_disp_keys"]],
-            )
+            xp = plot.parallel_plot(popts, fit_output[0]["hidden_keys"])
             selected = xp.to_streamlit("hip", "selected_uids").display()
-            fit = variable[int(selected[0])]
+            fit = fit_output[int(selected[0])]
             st.subheader(f"Displaying results of fit #{int(selected[0]) + 1}")
 
         # --------------------------------------------------------------------------------------------------------------
@@ -383,52 +405,52 @@ if st.session_state.ran:
         col1.markdown("""#### Fitting results""")
 
         # Plot
-        col1.plotly_chart(
-            plot.plot_decays(
-                fit["xs_data"],
-                fit["ys_data"],
-                quantity_input,
-                fit["fit_ydata"],
-                fit["N0s_labels"],
-            ),
-            use_container_width=True,
+        figure = plot.plot_decays(
+            fit["xs_data"],
+            fit["ys_data"],
+            quantity_input,
+            fit["fit_ydata"],
+            fit["N0s_labels"],
         )
+        col1.plotly_chart(figure, use_container_width=True)
 
         # Export
         header = np.concatenate([["Time (ns)", "Intensity %i" % i] for i in range(1, len(ys_data) + 1)])
         data = [val for pair in zip(fit["xs_data"], fit["fit_ydata"]) for val in pair]
-        export_data = utils.matrix_to_string(data, header)
+        export_data = matrix_to_string(data, header)
         col1.download_button("Download data", export_data, "pears_fit_data.csv")
 
         # ---------------------------------------- OPTIMISED PARAMETERS DISPLAY ----------------------------------------
 
         col1.markdown("""#### Parameters""")
-        for label in fit["labels"]:
-            col1.markdown(label, unsafe_allow_html=True)
+        col1.markdown(
+            '<div class="custom-line-spacing">' + "<br/>".join(fit["popt_labels"]) + "</div>", unsafe_allow_html=True
+        )
 
         # ----------------------------------------------- CONTRIBUTIONS ------------------------------------------------
 
         st.markdown("""#### Contributions""")
-        contributions = pd.DataFrame(fit["contributions"], index=fit["N0s_labels"]).transpose()
+        contributions = {model.CBT_LABELS[key]: value for key, value in fit["contributions"].items()}
+        contributions = pd.DataFrame(contributions, index=fit["N0s_labels"]).transpose()
         st.markdown(contributions.to_html(escape=False) + "<br>", unsafe_allow_html=True)
 
         # Analysis
-        for s in model.get_recommendations(fit["contributions"]):
+        for s in model.get_contribution_recommendations(fit["contributions"]):
             st.warning(s)
 
         # -------------------------------------------- CARRIER ACCUMULATION  -------------------------------------------
 
         if period:
             st.markdown("""#### Carrier accumulation""")
-            nca = model.get_carrier_accumulation(fit["popts"], fit["N0s"], period)
-            nca_df = pd.DataFrame(nca, index=["Carrier accumulation (%)"])
+            nca_dict = dict(zip(fit["N0s_labels"], nca))
+            nca_df = pd.DataFrame(nca_dict, index=["Carrier accumulation (%)"])
             st.markdown(nca_df.to_html(escape=False) + "<br>", unsafe_allow_html=True)
 
             # Analysis
-            max_nca = np.max(list(nca.values()))
+            max_nca = np.max(nca)
             if max_nca > 5.0:
                 st.warning(
-                    f"""This fit predicts significant carrier accumulation leading to a maximum {max_nca} %% difference 
+                    f"""This fit predicts significant carrier accumulation leading to a maximum {max_nca:.1f} % difference 
                     between the single pulse and multiple pulse TRPL decays. You might need to increase your 
                     excitation repetition period to prevent potential carrier accumulation."""
                 )
@@ -462,18 +484,16 @@ elif xs_data[0] is not None:
     with results_container.container():
         st.markdown("""#### Input data""")
         if N0s is not None:
-            labels = utils.get_power_labels(N0s)
+            labels = get_power_labels(N0s)
         else:
-            labels = ["%i" % (i + 1) for i in range(len(ys_data))]
-        st.plotly_chart(
-            plot.plot_decays(
-                xs_data,
-                ys_data,
-                quantity_input,
-                labels=labels,
-            ),
-            use_container_width=True,
+            labels = [f"Decay {i + 1}" for i in range(len(ys_data))]
+        figure = plot.plot_decays(
+            xs_data,
+            ys_data,
+            quantity_input,
+            labels=labels,
         )
+        st.plotly_chart(figure, use_container_width=True)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------- GENERAL INFORMATION ------------------------------------------------
@@ -485,19 +505,20 @@ with st.expander("About", xs_data[0] is None):
     st.info(
         f"""*Pears* is a user-friendly web app designed to fit time-resolved photoluminescence (TRPL) and time-resolved 
 microwave photoconductivity (TRMC) data of perovskite materials using state-of-the-art charge carrier 
-recombination models. Two models are available, extensively discussed for TRPL in [here](https://doi.org/10.1039/D0CP04950F).
-- The Bimolecular-Trapping-Auger model assumes no doping and that the trap states remain mostly empty over time 
-(due, for example, to fast detrapping). As a result, this model is relatively simpler and less likely to lead to over-fitting.
-- The Bimolecular-Trapping-Detrapping model accounts for bimolecular recombination, trapping, and detrapping 
+recombination models (extensively discussed for TRPL in https://doi.org/10.1039/D0CP04950F):
+- The Bimolecular-Trapping-Auger (BT) model assumes no doping and that the trap states remain mostly empty over time 
+(due, for example, to fast detrapping). As a result, this model is relatively simple and less likely to lead to over-fitting.
+- The Bimolecular-Trapping-Detrapping (BTD) model accounts for bimolecular recombination, trapping, and detrapping 
 with the presence of doping. Its increased complexity can lead to over-parameterisation and ambiguous results.\n
 Two modes are available.
-- The "{resources.FITTING_MODE}" mode can be used to fit experimental data given a set of guess parameters.
-- The "{resources.ANALYSIS_MODE}" mode runs the fitting optimisation for a range of guess parameters. If all the 
+- The "{resources.FITTING_MODE}" mode to fit experimental data given a set of guess parameters.
+- The "{resources.ANALYSIS_MODE}" mode to run the fitting optimisation for a range of guess parameters. If all the 
 optimisations do not converge toward the same values, then the fitting is inaccurate due to the possibility of multiple 
 solutions.\n
 App created and maintained by [Emmanuel V. Pean](https://emmanuelpean.streamlit.app/).  
-[Version 0.4](https://github.com/Emmanuelpean/pears) (last updated: 9th May 2022)."""
-    )  # TODO update date
+[Version {__version__}](https://github.com/Emmanuelpean/pears) (last updated: {__date__}).
+If you use *Pears* to fit your TRPL or TRMC data, please cite https://doi.org/10.1021/acs.jcim.3c00217."""
+    )  # TODO improve the descriptions
 
 # -------------------------------------------------- MODEL DESCRIPTION -------------------------------------------------
 
@@ -515,7 +536,7 @@ with st.expander("Model & computational details"):
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("<h3 style='text-align: center; '>Bimolecular-trapping model</h3>", unsafe_allow_html=True)
-        st.markdown("""%s""" % utils.render_image(resources.BT_MODEL_PATH, 65), unsafe_allow_html=True)
+        st.markdown("""%s""" % render_image(resources.BT_MODEL_PATH, 65), unsafe_allow_html=True)
         st.latex(r"n_e(t)=n_h(t)=n(t)")
         st.latex(r"\frac{dn}{dt}=-k_Tn-k_Bn^2-k_An^3,\ \ \ n^p(t=0)=n^{p-1}(T)+N_0")
         st.latex(r"I_{TRPL} \propto n^2")
@@ -532,7 +553,7 @@ with st.expander("Model & computational details"):
         st.markdown(
             "<h3 style='text-align: center; '>Bimolecular-trapping-detrapping model</h3>", unsafe_allow_html=True
         )
-        st.markdown(utils.render_image(resources.BTD_MODEL_PATH, 65), unsafe_allow_html=True)
+        st.markdown(render_image(resources.BTD_MODEL_PATH, 65), unsafe_allow_html=True)
         st.latex(r"\frac{dn_e}{dt}=-k_B n_e (n_h+p_0 )-k_T n_e [N_T-n_t ],\ \ \ n_e^p(t=0)=n_e^{p-1}(T)+N_0")
         st.latex(r"\frac{dn_t}{dt}=k_T n_e [N_T-n_t]-k_D n_t (n_h+p_0 ),\ \ \ n_t^p(t=0)=n_t^{p-1}(T)")
         st.latex(r"\frac{dn_h}{dt}=-k_B n_e (n_h+p_0 )-k_D n_t (n_h+p_0 ),\ \ \ n_h^p(t=0)=n_h^{p-1}(T)+N_0")
@@ -630,7 +651,7 @@ with st.expander("Model & computational details"):
     (10<sup>-20</sup>, 10<sup>-2</sup>), (10<sup>-19</sup>, 10<sup>-3</sup>) and (10<sup>-19</sup>, 10<sup>-2</sup>)). 
     Note that in the case of the bimolecular-trapping-detrapping model, only set of guess values satisfying $k_T>k_B$ 
     and $k_T>k_D$ are considered to keep the computational time reasonable. Fitting is then carried using each set of 
-    guess values as schematically represented below: {utils.render_image(resources.OPT_GUESS_PATH, 60, "png")}
+    guess values as schematically represented below: {render_image(resources.OPT_GUESS_PATH, 60, "png")}
     In the case where all the optimisations converge towards a similar solution, it can be assumed that only 1 solution
     exist and that therefore the parameter values obtained accurately describe the system measured. However, if the fits 
     converge toward multiple solutions, it is not possible to ascertain which solution represents the system accurately.""",
@@ -641,24 +662,22 @@ with st.expander("Model & computational details"):
 
 with st.expander("Getting started"):
     st.markdown("""#### Example""")
-    data1_link = utils.generate_download_link(resources.BT_TRPL_DATA, text="TRPL data set 1", name="TRPL data set 1")
-    data2_link = utils.generate_download_link(resources.BTD_TRPL_DATA, text="TRPL data set 2", name="TRPL data set 2")
-    data3_link = utils.generate_download_link(resources.BTD_TRMC_DATA_2, text="TRMC data set 3", name="TRMC data set 1")
     st.markdown("""Follow these steps to fit TRPL/TRMC decays.""")
     st.markdown(
         f"""1. Upload your data and select the data format (tab/space in this example). Select whether TRPL or TRMC is analysed.
     Check the "Pre-process data" box for PEARS to shift the decay(s) and normalise it (the later is done only for TRPL data);
-    * _e.g._ {data1_link}, 
-    * _e.g._ {data2_link}
-    * _e.g._ {data3_link} (select X1/Y1/X2/Y2... data format)""",
+    * _e.g._ {resources.BT_TRPL_LINK}, 
+    * _e.g._ {resources.BTD_TRPL_LINK},
+    * _e.g._ {resources.BT_TRMC_LINK},
+    * _e.g._ {resources.BTD_TRMC_LINK}""",
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        """2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL/TRMC decay 
+        f"""2. Enter the photoexcited carrier concentrations (in $cm^{-3}$) for each TRPL/TRMC decay 
     measured (separated by a comma);
-    * _e.g._: 5.58e15, 1.00e16, 2.23e16 (data set 1)
-    * _e.g._: 55e12, 164e12, 511e12, 1720e12, 4750e12 (data set 2 & 3)""",
+    * _e.g._: {', '.join([('%.2e' % f).replace('+', '') for f in resources.BT_TRPL_DATA[-1]])} (BT model datasets)
+    * _e.g._: {', '.join([('%.2e' % f).replace('+', '') for f in resources.BTD_TRPL_DATA[-1]])} (BTD model datasets)""",
         unsafe_allow_html=True,
     )
 
@@ -727,3 +746,6 @@ with st.expander("Disclaimer"):
     LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE 
     USE OR OTHER DEALINGS IN THE SOFTWARE."""
     )
+
+
+# TODO add TRPL and TRMC calculations after fit

@@ -1,0 +1,8 @@
+/* Header bar */
+[data-testid="stDecoration"] {
+		background-image: linear-gradient(90deg, rgb(207, 165, 0), rgb(245, 237, 204));
+	}
+
+.custom-line-spacing {
+  line-height: 2.5; /* Adjust this value as needed */
+}

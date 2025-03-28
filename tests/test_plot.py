@@ -145,14 +145,14 @@ class TestPlotCarrierConcentrations:
 
 class TestParallelPlot:
     def test_basic_plot(self):
+
         data = [
             {"a": 1, "b": 2},
             {"a": 3, "b": 4},
         ]
-        notdisp = ["b"]
-        order = ["a"]
+        hidden_keys = ["b"]
 
-        xp = parallel_plot(data, notdisp, order)
+        xp = parallel_plot(data, hidden_keys)
 
         assert isinstance(xp, hiplot.Experiment)
         assert len(xp.datapoints) == 2
@@ -160,12 +160,12 @@ class TestParallelPlot:
         assert xp.datapoints[1].values["ID"] == 2
 
     def test_hide_and_order(self):
-        data = [{"x": 10, "y": 20, "z": 30}]
-        notdisp = ["y"]
-        order = ["x", "z"]
 
-        xp = parallel_plot(data, notdisp, order)
+        data = [{"x": 10, "y": 20, "z": 30}]
+        hidden_keys = ["y"]
+
+        xp = parallel_plot(data, hidden_keys)
         display_data = xp.display_data(hiplot.Displays.PARALLEL_PLOT)
 
-        assert "y" in display_data["hide"]
-        assert display_data["order"] == ["ID", "x", "z"]
+        assert display_data["hide"] == ["y", "uid"]
+        assert display_data["order"] == ["z", "x", "ID"]
