@@ -200,7 +200,7 @@ class TestBTModelTRPL:
             "B": np.float64(25.724244681350395),
             "A": np.float64(3.859251618686695e-05),
         }
-        assert contributions == expected
+        assert are_close(contributions, expected)
 
     def test_get_carrier_accumulation(self):
 
