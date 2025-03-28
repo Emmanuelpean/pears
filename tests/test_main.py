@@ -11,7 +11,7 @@ from app.utility.data import are_close
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-main_path = "../app/main.py"
+main_path = "app/main.py"
 
 
 BT_TRPL_expected = {
