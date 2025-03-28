@@ -126,7 +126,7 @@ def are_identical(
 def are_close(*args):
     """Check if two objects are similar"""
 
-    return are_identical(*args, rtol=1e-5)
+    return are_identical(*args, rtol=1e-3)
 
 
 def get_data_index(

@@ -8,8 +8,6 @@ from streamlit.testing.v1 import AppTest
 from app.resources import APP_MODES, BTD_TRMC_DATA, BTD_TRPL_DATA, BT_TRMC_DATA, BT_TRPL_DATA
 from app.utility.data import are_close
 
-main_path = os.path.join(os.getcwd(), "../app/main.py")
-
 
 BT_TRPL_expected = {
     "popt": {
@@ -220,3 +218,9 @@ class TestApp:
 
     def test_bt_trmc_grid(self):
         self._test_grid_fitting(BT_TRMC_DATA, "TRMC", "BTA", BT_TRMC_GRID_expected)
+
+
+if __name__ != "__main__":
+    main_path = "../app/main.py"
+else:
+    main_path = "app/main.py"

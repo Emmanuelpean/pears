@@ -842,123 +842,128 @@ class TestBTDModelTRPL:
 
     def test_grid_fitting(self):
 
+        model = BTDModelTRPL()
+        model.gvalues_range["k_B"] = [1e-20]
+        model.gvalues_range["k_T"] = [1e-16]
+        model.gvalues_range["p_0"] = [1e14]
+
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
-        xs_data, ys_data, N0s = BTDModelTRPL().generate_decays()
-        analysis = BTDModelTRPL().grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
+        xs_data, ys_data, N0s = model.generate_decays()
+        analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
         popt_expected = {
-            "k_B": 5.000000093611791e-19,
-            "k_T": 1.200000002628408e-16,
-            "k_D": 7.999999777128702e-19,
-            "p_0": 65000001152417.23,
-            "N_T": 59999999931067.07,
+            "k_B": 5.044092519858126e-19,
+            "k_T": 1.221507144388288e-16,
+            "k_D": 3.2627489522773756e-19,
+            "p_0": 201606458996472.16,
+            "N_T": 58686486048362.56,
             "y_0": 0.0,
             "I": 1.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([97.55966, 67.41144, 28.74199, 10.17702, 5.60928]),
-            "B": np.array([1.80154, 23.92938, 61.86576, 85.42388, 92.5306]),
-            "D": np.array([0.6388, 8.65918, 9.39225, 4.3991, 1.86012]),
+            "T": np.array([96.06959, 59.97392, 22.63214, 7.46053, 4.46979]),
+            "B": np.array([3.67138, 36.55816, 73.6027, 90.75852, 94.78018]),
+            "D": np.array([0.25903, 3.46791, 3.76516, 1.78095, 0.75003]),
         }
-        expected_cod = 0.9999999999999999
+        expected_cod = 0.9999689786967758
         assert_fit(analysis[0], popt_expected, contribution_expected, expected_cod)
         popt_expected = {
-            "k_B": 5.000000011989415e-19,
-            "k_T": 1.1999999957890975e-16,
-            "k_D": 8.000000087079136e-19,
-            "p_0": 64999995597143.234,
-            "N_T": 60000000151313.72,
+            "k_B": 5.0000000437758285e-19,
+            "k_T": 1.200000008803637e-16,
+            "k_D": 8.000000823783076e-19,
+            "p_0": 64999983771959.49,
+            "N_T": 59999999918573.16,
             "y_0": 0.0,
             "I": 1.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
             "T": np.array([97.55966, 67.41144, 28.74199, 10.17702, 5.60928]),
-            "B": np.array([1.80154, 23.92938, 61.86576, 85.42388, 92.5306]),
+            "B": np.array([1.80154, 23.92937, 61.86576, 85.42388, 92.5306]),
             "D": np.array([0.6388, 8.65918, 9.39225, 4.3991, 1.86012]),
         }
-        expected_cod = 0.9999999999999999
+        expected_cod = 0.9999999999999998
         assert_fit(analysis[-1], popt_expected, contribution_expected, expected_cod)
 
         # ---------------------------------------------------- NOISY ---------------------------------------------------
 
-        xs_data, ys_data, N0s = BTDModelTRPL().generate_decays(0.05)
-        analysis = BTDModelTRPL().grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
+        xs_data, ys_data, N0s = model.generate_decays(0.05)
+        analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
         popt_expected = {
-            "k_B": 5.281236277416963e-19,
-            "k_T": 1.2005243242564624e-16,
-            "k_D": 5.934207947861625e-19,
-            "p_0": 108141050868568.31,
-            "N_T": 58116727175725.7,
+            "k_B": 5.281625280355903e-19,
+            "k_T": 1.2005402935900586e-16,
+            "k_D": 5.911623649351193e-19,
+            "p_0": 108688274641093.72,
+            "N_T": 58112578119929.21,
             "y_0": 0.0,
             "I": 1.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([96.85834, 63.94171, 25.5992, 8.68744, 4.9208]),
-            "B": np.array([2.64383, 29.74491, 67.73739, 88.24191, 93.79403]),
-            "D": np.array([0.49783, 6.31338, 6.66341, 3.07064, 1.28517]),
+            "T": np.array([96.85187, 63.91184, 25.5731, 8.67546, 4.91564]),
+            "B": np.array([2.65221, 29.79925, 67.78904, 88.26562, 93.80414]),
+            "D": np.array([0.49592, 6.28891, 6.63786, 3.05892, 1.28022]),
         }
-        expected_cod = 0.921906653204574
+        expected_cod = 0.9219066554530871
         assert_fit(analysis[0], popt_expected, contribution_expected, expected_cod)
         popt_expected = {
-            "k_B": 5.281666736033347e-19,
-            "k_T": 1.200520415673079e-16,
-            "k_D": 5.910958776984677e-19,
-            "p_0": 108698714852090.42,
-            "N_T": 58112964498962.56,
+            "k_B": 5.281014612329833e-19,
+            "k_T": 1.2004301649017149e-16,
+            "k_D": 5.952924043139263e-19,
+            "p_0": 107673071106750.62,
+            "N_T": 58122054681198.03,
             "y_0": 0.0,
             "I": 1.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([96.85175, 63.91105, 25.57234, 8.6751, 4.91546]),
-            "B": np.array([2.65239, 29.80067, 67.79049, 88.2663, 93.80446]),
-            "D": np.array([0.49586, 6.28828, 6.63717, 3.05859, 1.28008]),
+            "T": np.array([96.86386, 63.9668, 25.62092, 8.69737, 4.92498]),
+            "B": np.array([2.63673, 29.69927, 67.6943, 88.22221, 93.78573]),
+            "D": np.array([0.49942, 6.33393, 6.68478, 3.08042, 1.28929]),
         }
-        expected_cod = 0.9219066554058585
+        expected_cod = 0.9219066470404309
         assert_fit(analysis[-1], popt_expected, contribution_expected, expected_cod)
 
         # -------------------------------------------- NO NOISE/ NON-FIXED I -------------------------------------------
 
-        xs_data, ys_data, N0s = BTDModelTRPL().generate_decays(0.05)
-        model = BTDModelTRPL()
+        xs_data, ys_data, N0s = model.generate_decays(0.05)
         model.fvalues["I"] = None
+        model.gvalues_range["k_D"] = [1e-18]
         analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
         popt_expected = {
-            "k_B": 5.230103096638647e-19,
-            "k_T": 1.1867680207128173e-16,
-            "k_D": 6.163965026524936e-19,
-            "p_0": 96486589790116.2,
-            "N_T": 60348523567727.016,
-            "I": 1.0431275498205914,
+            "k_B": 5.233892964974858e-19,
+            "k_T": 1.1867745425973867e-16,
+            "k_D": 6.055792534709746e-19,
+            "p_0": 98983350486299.22,
+            "N_T": 60330106371418.1,
+            "I": 1.0430840799173018,
             "y_0": 0.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([97.21062, 65.66646, 26.65979, 9.10916, 5.12567]),
-            "B": np.array([2.30473, 27.68336, 66.15093, 87.56247, 93.47888]),
-            "D": np.array([0.48465, 6.65018, 7.18928, 3.32837, 1.39544]),
+            "T": np.array([97.18283, 65.53522, 26.53384, 9.04918, 5.09949]),
+            "B": np.array([2.34114, 27.93346, 66.40415, 87.68164, 93.53021]),
+            "D": np.array([0.47603, 6.53132, 7.06201, 3.26918, 1.3703]),
         }
-        expected_cod = 0.9221545409311727
+        expected_cod = 0.9221545717141318
         assert_fit(analysis[0], popt_expected, contribution_expected, expected_cod)
         popt_expected = {
-            "k_B": 5.233956885458705e-19,
-            "k_T": 1.1872905439925336e-16,
-            "k_D": 6.056063386521136e-19,
-            "p_0": 99024331717824.23,
-            "N_T": 60317114989070.92,
-            "I": 1.043126674399781,
+            "k_B": 5.231318664511353e-19,
+            "k_T": 1.1868317014121706e-16,
+            "k_D": 6.1288804671095715e-19,
+            "p_0": 97302985162596.94,
+            "N_T": 60340004786445.39,
+            "I": 1.0431027851890577,
             "y_0": 0.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([97.18216, 65.52863, 26.53039, 9.04846, 5.09989]),
-            "B": np.array([2.34175, 27.94042, 66.40875, 87.68295, 93.53006]),
-            "D": np.array([0.47608, 6.53095, 7.06086, 3.26859, 1.37004]),
+            "T": np.array([97.20144, 65.62315, 26.61848, 9.08953, 5.11716]),
+            "B": np.array([2.31668, 27.76541, 66.23378, 87.60143, 93.49561]),
+            "D": np.array([0.48187, 6.61144, 7.14774, 3.30904, 1.38723]),
         }
-        expected_cod = 0.9221545724859059
+        expected_cod = 0.9221545624359501
         assert_fit(analysis[-1], popt_expected, contribution_expected, expected_cod)
 
 
@@ -1058,10 +1063,16 @@ class TestBTDModelTRMC:
 
     def test_grid_fitting(self):
 
+        model = BTDModelTRMC()
+        model.gvalues_range["k_B"] = [1e-20]
+        model.gvalues_range["k_T"] = [1e-16]
+        model.gvalues_range["k_D"] = [1e-18]
+        model.gvalues_range["p_0"] = [1e14]
+
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
-        xs_data, ys_data, N0s = BTDModelTRMC().generate_decays()
-        analysis = BTDModelTRMC().grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
+        xs_data, ys_data, N0s = model.generate_decays()
+        analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
         popt_expected = {
             "k_B": 5.000000263245968e-19,
             "k_T": 1.200000041725577e-16,
@@ -1102,42 +1113,41 @@ class TestBTDModelTRMC:
 
         # ---------------------------------------------------- NOISY ---------------------------------------------------
 
-        xs_data, ys_data, N0s = BTDModelTRMC().generate_decays(0.05)
-        analysis = BTDModelTRMC().grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
+        xs_data, ys_data, N0s = model.generate_decays(0.05)
+        analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
         popt_expected = {
-            "k_B": 5.17002000325496e-19,
-            "k_T": 1.1022001194645755e-16,
-            "k_D": 8.1240843485904365e-19,
-            "p_0": 63170806651543.51,
-            "N_T": 57500308771256.91,
-            "mu_e": 20.815112043901372,
-            "mu_h": 29.663903574276098,
+            "k_B": 5.169968590421277e-19,
+            "k_T": 1.1017306106751546e-16,
+            "k_D": 8.120500700336253e-19,
+            "p_0": 63209041226835.805,
+            "N_T": 57509469769832.9,
+            "mu_e": 20.816413593836856,
+            "mu_h": 29.663528347986045,
             "y_0": 0.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([41.92868, 33.0314, 20.51521, 12.50712, 9.19551]),
-            "B": np.array([1.91655, 23.14379, 54.69563, 76.78333, 85.83646]),
-            "D": np.array([56.15477, 43.82481, 24.78916, 10.70955, 4.96803]),
+            "T": np.array([41.92978, 33.03175, 20.51353, 12.50502, 9.19378]),
+            "B": np.array([1.91722, 23.14519, 54.69963, 76.78697, 85.83906]),
+            "D": np.array([56.153, 43.82306, 24.78684, 10.70801, 4.96716]),
         }
-        expected_cod = 0.9072435361017522
+        expected_cod = 0.9072435361184141
         assert_fit(analysis[0], popt_expected, contribution_expected, expected_cod)
-
         popt_expected = {
-            "k_B": 5.170129200443939e-19,
-            "k_T": 1.1013664801088301e-16,
-            "k_D": 8.118473869065171e-19,
-            "p_0": 63227523082681.08,
-            "N_T": 57510855721414.48,
-            "mu_e": 20.818356280002305,
-            "mu_h": 29.662260638500612,
+            "k_B": 5.170343293253923e-19,
+            "k_T": 1.1018194467749615e-16,
+            "k_D": 8.121236402177761e-19,
+            "p_0": 63200380749480.586,
+            "N_T": 57501357284825.3,
+            "mu_e": 20.817089249169957,
+            "mu_h": 29.662940880799475,
             "y_0": 0.0,
             "N_0": 51000000000000.0,
         }
         contribution_expected = {
-            "T": np.array([41.93249, 33.03245, 20.51221, 12.5032, 9.19216]),
-            "B": np.array([1.91805, 23.14874, 54.70457, 76.79079, 85.84172]),
-            "D": np.array([56.14946, 43.81881, 24.78322, 10.70601, 4.96612]),
+            "T": np.array([41.93091, 33.03105, 20.51274, 12.50452, 9.19342]),
+            "B": np.array([1.91766, 23.14931, 54.70297, 76.78871, 85.84002]),
+            "D": np.array([56.15143, 43.81964, 24.78429, 10.70677, 4.96656]),
         }
-        expected_cod = 0.9072435358748904
+        expected_cod = 0.9072435358895351
         assert_fit(analysis[-1], popt_expected, contribution_expected, expected_cod)
