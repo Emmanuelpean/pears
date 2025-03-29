@@ -51,7 +51,7 @@ class TestModel:
         conc_ca_ids = ["n"]
         param_filters = []
 
-        def n_init(N_0):
+        def n_init(N_0):  # pragma: no cover
             return {"n": N_0}
 
         return Model(
@@ -114,6 +114,22 @@ class TestModel:
         assert model.get_contribution_recommendation("Auger") == expected
         assert model.get_contribution_recommendation("Auger", "higher") == expected2
 
+    def test_rate_equations(self, model):
+
+        assert model._rate_equations() == {}
+
+    def test_calculate_contributions(self, model):
+
+        assert model.calculate_contributions() == {}
+
+    def test_calculate_fit_quantity(self, model):
+
+        assert model.calculate_fit_quantity() == np.array([0])
+
+    def test_get_contribution_recommendations(self, model):
+
+        assert model.get_contribution_recommendations() == [""]
+
 
 class TestBTModel:
 
@@ -140,13 +156,13 @@ class TestBTModel:
         assert np.allclose(output["n"][0][:3], np.array([1.00000000e17, 9.43127550e16, 8.91893621e16]))
 
         # Multiple pulses
-        output2 = model._calculate_concentrations(T, 1e17, **BT_KWARGS, p=1000)
-        assert np.allclose(output2["n"][-1][:3], np.array([1.09021346e17, 1.02383279e17, 9.64515430e16]))
-        assert len(output2["n"]) == 5
+        output = model._calculate_concentrations(T, 1e17, **BT_KWARGS, p=1000)
+        assert np.allclose(output["n"][-1][:3], np.array([1.09021346e17, 1.02383279e17, 9.64515430e16]))
+        assert len(output["n"]) == 5
 
-        # Additional parameters
-        output = model._calculate_concentrations(T, 1e17, **BT_KWARGS)
-        assert np.allclose(output["n"][0][:3], np.array([1.00000000e17, 9.43127550e16, 8.91893621e16]))
+        # Multiple pulses - No stabilisation
+        with pytest.raises(AssertionError):
+            model._calculate_concentrations(T, 1e17, **BT_KWARGS, p=3)
 
     def test_get_carrier_concentrations(self, model):
 
@@ -164,11 +180,25 @@ class TestBTModel:
 
     def test_get_contribution_recommendations(self, model):
 
-        contributions = {"T": np.array([5.0]), "B": np.array([15.0])}
+        contributions = {"T": np.array([5.0]), "B": np.array([5.0]), "A": np.array([0])}
         recs = model.get_contribution_recommendations(contributions)
         expected = [
             "This fit predicts low trapping. The values associated with this process may be inaccurate.\nIt is "
-            "recommended to measure your sample under lower excitation fluence for this process to become significant"
+            "recommended to measure your sample under lower excitation fluence for this process to become significant",
+            "This fit predicts low bimolecular. The values associated with this process may be inaccurate.\nIt is "
+            "recommended to measure your sample under higher excitation fluence for this process to become significant",
+        ]
+        assert recs == expected
+
+        model.fvalues["k_A"] = None
+        recs = model.get_contribution_recommendations(contributions)
+        expected = [
+            "This fit predicts low trapping. The values associated with this process may be inaccurate.\nIt is "
+            "recommended to measure your sample under lower excitation fluence for this process to become significant",
+            "This fit predicts low bimolecular. The values associated with this process may be inaccurate.\nIt is "
+            "recommended to measure your sample under higher excitation fluence for this process to become significant",
+            "This fit predicts low Auger. The values associated with this process may be inaccurate.\nIt is "
+            "recommended to measure your sample under higher excitation fluence for this process to become significant",
         ]
         assert recs == expected
 
@@ -410,6 +440,14 @@ class TestBTModelTRPL:
         }
         assert_fit(analysis[0], popt_expected, contributions_expected, 1.0)
         assert_fit(analysis[-1], popt_expected_2, contribution_expected_2, 0.9992469395390701)
+
+        # ------------------------------------------------- FAILED FIT -------------------------------------------------
+
+        xs_data, ys_data, N0s = BTModelTRPL().generate_decays()
+        model = BTModelTRPL()
+        model.gvalues_range["k_B"] = [1e-20, -1e-20]
+        analysis = model.grid_fitting(None, N0s, xs_data=xs_data, ys_data=ys_data)
+        assert len(analysis) == 2
 
 
 class TestBTModelTRMC:
@@ -673,12 +711,9 @@ class TestBTDModel:
         assert np.allclose(output["n_e"][-1][:3] + output["n_t"][-1][:3], output["n_h"][-1][:3])
         assert len(output["n_e"]) == 5
 
-        # Single pulse (with additional argument)
-        output = model._calculate_concentrations(T, 1e17, **BTD_KWARGS)
-        assert np.allclose(output["n_e"][0][:3], np.array([1.00000000e17, 9.51739441e16, 9.08408676e16]))
-        assert np.allclose(output["n_t"][0][:3], np.array([0.00000000e00, 5.96016786e13, 5.96021105e13]))
-        assert np.allclose(output["n_h"][0][:3], np.array([1.00000000e17, 9.52335458e16, 9.09004697e16]))
-        assert np.allclose(output["n_e"][0][:3] + output["n_t"][0][:3], output["n_h"][0][:3])
+        # Multiple pulses - No stabilisation
+        with pytest.raises(AssertionError):
+            model._calculate_concentrations(T, 1e17, **BTD_KWARGS, p=3)
 
     def test_get_carrier_concentrations(self, model):
 
@@ -700,16 +735,18 @@ class TestBTDModel:
 
     def test_get_contribution_recommendations(self, model):
 
-        contributions = {"B": np.array([5]), "T": np.array([15]), "D": np.array([8])}
+        contributions = {"B": np.array([5]), "T": np.array([5]), "D": np.array([8])}
         recs = model.get_contribution_recommendations(contributions)
         expected = [
-            "This fit predicts low bimolecular. The values associated with this process may be inaccurate.\nIt is "
-            "recommended to measure your sample under higher excitation fluence for this process to become significant",
+            "This fit predicts low bimolecular. The values associated with this process may be inaccurate.\nIt "
+            "is recommended to measure your sample under higher excitation fluence for this process to become significant",
+            "This fit predicts low trapping. The values associated with this process may be inaccurate.\nIt is recommended to "
+            "measure your sample under lower excitation fluence for this process to become significant",
             "This fit predicts low detrapping. The values associated with this process may be inaccurate.",
-            "Note: For the bimolecular-trapping-detrapping model, although a low contribution suggests that the parameter "
-            "associated with the process are not be accurate, a non-negligible contribution does not automatically "
-            "indicate that the parameters retrieved are accurate due to the complex nature of the model. It is recommended "
-            "to perform a grid fitting analysis with this model.",
+            "Note: For the bimolecular-trapping-detrapping model, although a low contribution suggests that the "
+            "parameter associated with the process are not be accurate, a non-negligible contribution does not "
+            "automatically indicate that the parameters retrieved are accurate due to the complex nature of the "
+            "model. It is recommended to perform a grid fitting analysis with this model.",
         ]
         assert recs == expected
 
@@ -1151,23 +1188,3 @@ class TestBTDModelTRMC:
         }
         expected_cod = 0.9072435358895351
         assert_fit(analysis[-1], popt_expected, contribution_expected, expected_cod)
-
-
-def show_diff(dict1, dict2):
-    for key in dict1:
-        error = np.abs(dict1[key] - dict2[key]) / dict1[key]
-        print(key, error)
-
-
-A = {
-    "T": np.array([97.17746026, 65.50648404, 26.509502, 9.03855568, 5.09553806]),
-    "B": np.array([2.34785501, 27.9820322, 66.45051903, 87.70255787, 93.53853741]),
-    "D": np.array([0.47468473, 6.51148376, 7.03997896, 3.25888645, 1.36592453]),
-}
-B = {
-    "T": np.array([97.19901, 65.60995, 26.60699, 9.08448, 5.11529]),
-    "B": np.array([2.31978, 27.78817, 66.25586, 87.61144, 93.49959]),
-    "D": np.array([0.48121, 6.60188, 7.13715, 3.30408, 1.38512]),
-}
-
-show_diff(A, B)

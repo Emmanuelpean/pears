@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 from io import BytesIO
@@ -31,6 +32,23 @@ BT_TRPL_expected = {
     "ca": [0.20075745903090358, 0.9503120802981269, 0.6080441775140444],
 }
 
+BT_TRPL_SHIFTED_expected = {
+    "popt": {
+        "k_T": 0.01027692599435874,
+        "k_B": 5.223353716145634e-19,
+        "k_A": 0.0,
+        "y_0": 0.0,
+        "I": 1.0,
+        "N_0": 1000000000000000.0,
+    },
+    "contributions": {
+        "T": np.array([96.71939708, 75.26854715, 25.35779815]),
+        "B": np.array([3.28060292, 24.73145285, 74.64220185]),
+        "A": np.array([0.0, 0.0, 0.0]),
+    },
+    "ca": [0.19826769835378788, 0.9274715441877357, 0.5803950947538994],
+}
+
 BTD_TRPL_expected = {
     "popt": {
         "I": 1.0,
@@ -49,6 +67,7 @@ BTD_TRPL_expected = {
     },
     "ca": [47.390257057209226, 17.86713876214925, 14.169801097560752, 25.484481563736466, 20.172770374561566],
 }
+
 BT_TRMC_expected = {
     "popt": {
         "N_0": 1000000000000000.0,
@@ -107,6 +126,20 @@ BT_TRMC_GRID_expected = [
 
 class TestApp:
 
+    @staticmethod
+    def create_mock_file(mock_file_uploader: MagicMock, data: np.ndarray) -> None:
+        """Create a temporary CSV file with uneven columns and mock file upload.
+        :param mock_file_uploader: MagicMock
+        :param data: data to be uploaded"""
+
+        temp_path = "_temp.csv"
+        np.savetxt(temp_path, data, fmt="%s", delimiter=",")
+
+        with open(temp_path, "rb") as f:
+            mock_file_uploader.return_value = BytesIO(f.read())
+
+        os.remove(temp_path)
+
     @patch("streamlit.sidebar.file_uploader")
     def _test_fitting(
         self,
@@ -114,15 +147,13 @@ class TestApp:
         quantity: str,
         model: str,
         expected_output: dict,
+        preprocess: bool,
         mock_file_uploader: MagicMock,
     ) -> None:
 
-        # Save and load the data
-        temp_path = "_temp.csv"
-        np.savetxt(temp_path, np.transpose([dataset[0][0]] + dataset[1]), delimiter=",")
-        with open("_temp.csv", "rb") as f:
-            mock_file_uploader.return_value = BytesIO(f.read())
-        os.remove(temp_path)
+        # Load the data
+        data = np.transpose([dataset[0][0]] + dataset[1])
+        self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
         at = AppTest(main_path, default_timeout=100)
@@ -130,6 +161,10 @@ class TestApp:
 
         # Select the correct quantity
         at.sidebar.radio[2].set_value(quantity)
+
+        # Pre-processing
+        if preprocess:
+            at.sidebar.checkbox[0].set_value(True)
 
         # Check the number of fluence inputs
         assert len(at.text_input) == len(dataset[2])
@@ -157,16 +192,172 @@ class TestApp:
         assert are_close(at.session_state["carrier_accumulation"], expected_output["ca"])
 
     def test_bt_trpl(self):
-        self._test_fitting(BT_TRPL_DATA, "TRPL", "BTA", BT_TRPL_expected)
+        self._test_fitting(BT_TRPL_DATA, "TRPL", "BTA", BT_TRPL_expected, False)
+
+    def test_bt_trpl_preprocess(self):
+
+        data = list(copy.deepcopy(BT_TRPL_DATA))
+        x0 = np.linspace(0, 50, 51)
+        data[0] = [np.concatenate([x0, x + x0[-1]]) for x in data[0]]
+        data[1] = [np.concatenate([np.zeros(len(x0)), x]) for x in data[1]]
+        self._test_fitting(BT_TRPL_DATA, "TRPL", "BTA", BT_TRPL_SHIFTED_expected, True)
 
     def test_btd_trpl(self):
-        self._test_fitting(BTD_TRPL_DATA, "TRPL", "BTD", BTD_TRPL_expected)
+        self._test_fitting(BTD_TRPL_DATA, "TRPL", "BTD", BTD_TRPL_expected, False)
 
     def test_bt_trmc(self):
-        self._test_fitting(BT_TRMC_DATA, "TRMC", "BTA", BT_TRMC_expected)
+        self._test_fitting(BT_TRMC_DATA, "TRMC", "BTA", BT_TRMC_expected, False)
 
     def test_btd_trmc(self):
-        self._test_fitting(BTD_TRMC_DATA, "TRMC", "BTD", BTD_TRMC_expected)
+        self._test_fitting(BTD_TRMC_DATA, "TRMC", "BTD", BTD_TRMC_expected, False)
+
+    def test_virgin(self):
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+        assert at.info[0].value == "Load a data file"
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_invalid_carrier_concentrations(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.random.randn(10, 3)
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        # Check the number of fluence inputs
+        assert len(at.text_input) == len(data[0]) - 1
+        at.sidebar.text_input[0].input("1e12")
+        at.sidebar.text_input[1].input("1e12fd")
+        at.run()
+
+        expected = "Uh-oh! The initial carrier concentrations input is not valid"
+        assert at.error[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_invalid_fixed_guess_value(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        # Check the number of fluence inputs
+        assert len(at.text_input) == len(BT_TRPL_DATA[2])
+        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
+            text_input.input(str(N0))
+        at.run()
+
+        # Change the fixed value to an incorrect value
+        at.sidebar.text_input[3].set_value("f")
+        at.run()
+
+        assert at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] != "f"
+
+        # Change the guess value to an incorrect value
+        at.sidebar.text_input[4].set_value("f")
+        at.run()
+
+        assert at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] != "f"
+
+        # Change the fixed value range to an incorrect value
+        at.sidebar.selectbox[0].set_value("Grid Fitting")
+        at.run()
+        at.sidebar.text_input[4].set_value("2,5,f")
+        at.run()
+
+        assert at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] != "f"
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_bad_fitting(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        # Check the number of fluence inputs
+        assert len(at.text_input) == len(BT_TRPL_DATA[2])
+        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
+            text_input.input(str(N0))
+        at.run()
+
+        # Change the fixed value to an incorrect value
+        at.sidebar.text_input[4].set_value("-1")
+        at.run()
+
+        # Click on the button and assert the fit results
+        at.sidebar.button[0].click()
+        at.run()
+
+        expected = "Uh Oh, the data could not be fitted. Try changing the parameter guess or fixed values."
+        assert at.error[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_settings_changed(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        # Check the number of fluence inputs
+        assert len(at.text_input) == len(BT_TRPL_DATA[2])
+        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
+            text_input.input(str(N0))
+        at.run()
+
+        # Click on the button and assert the fit results
+        at.sidebar.button[0].click()
+        at.run()
+
+        # Change settings
+        at.sidebar.text_input[4].set_value("1")
+        at.run()
+
+        expected = 'You have changed some of the input settings. Press "Run" to apply the changes'
+        assert at.warning[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_stored_ca(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        # Check the number of fluence inputs
+        assert len(at.text_input) == len(BT_TRPL_DATA[2])
+        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
+            text_input.input(str(N0))
+        at.run()
+
+        # Click on the button and assert the fit results
+        at.sidebar.button[0].click()
+        at.run()
+
+        at.sidebar.text_input[-1].set_value("100")
+        at.run()
+
+        # Rerun
+        at.run()
+        assert at.session_state.carrier_accumulation is not None
 
     @patch("streamlit.sidebar.file_uploader")
     def _test_grid_fitting(
@@ -179,11 +370,7 @@ class TestApp:
     ) -> None:
 
         # Save and load the data
-        temp_path = "_temp.csv"
-        np.savetxt(temp_path, np.transpose([dataset[0][0]] + dataset[1]), delimiter=",")
-        with open("_temp.csv", "rb") as f:
-            mock_file_uploader.return_value = BytesIO(f.read())
-        os.remove(temp_path)
+        self.create_mock_file(mock_file_uploader, np.transpose([dataset[0][0]] + dataset[1]))
 
         # Start the app and run it
         at = AppTest(main_path, default_timeout=100)
@@ -223,3 +410,78 @@ class TestApp:
 
     def test_bt_trmc_grid(self):
         self._test_grid_fitting(BT_TRMC_DATA, "TRMC", "BTA", BT_TRMC_GRID_expected)
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_uneven_column_file(self, mock_file_uploader: MagicMock):
+
+        x = np.linspace(0, 10, 50)
+        y = np.cos(x[:-10])  # Make y2 shorter than x
+        y_str = [str(_y) for _y in y] + [""] * (len(x) - len(y))
+        temp_path = "_temp.csv"
+        np.savetxt(temp_path, np.transpose([x, y_str]), fmt="%s", delimiter=",")
+        with open("_temp.csv", "rb") as f:
+            mock_file_uploader.return_value = BytesIO(f.read())
+        os.remove(temp_path)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
+        assert at.error[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_uneven_column_file2(self, mock_file_uploader: MagicMock):
+
+        # Create uneven data
+        x = np.linspace(0, 10, 50)
+        y = np.cos(x[:-10])
+        y_str = [str(_y) for _y in y] + [""] * (len(x) - len(y))
+
+        # Load the data
+        self.create_mock_file(mock_file_uploader, np.transpose([x, y_str]))
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
+        assert at.error[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_column_file(self, mock_file_uploader: MagicMock):
+
+        # Create uneven data
+        x = [np.linspace(0, 10, 50)] * 3
+        y = [np.cos(x[0])] * 2
+        data = np.transpose([x[0], y[0], x[1], y[1], x[2]])
+
+        # Load the data
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        at.sidebar.radio[0].set_value("X1/Y1/X2/Y2...")
+        at.run()
+
+        expected = "Uh-oh! The data could not be loaded. Error: Mismatch: x data and y data must have the same number of columns."
+        assert at.error[0].value == expected
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_incorrect_delimiter(self, mock_file_uploader: MagicMock):
+
+        # Load the data
+        data = np.random.randn(10, 3)
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        at = AppTest(main_path, default_timeout=100)
+        at.run()
+
+        at.sidebar.radio[1].set_value(";")
+        at.run()
+
+        expected = "Uh-oh! The data could not be loaded. Error: Unknown error, Check that the correct delimiter has been selected."
+        assert at.error[0].value == expected

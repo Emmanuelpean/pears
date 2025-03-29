@@ -60,6 +60,16 @@ class TestPlotDecays:
         assert "Time (ns)" in fig.layout.xaxis.title.text
         assert "Intensity (cm<sup>2</sup>/(Vs))" in fig.layout.yaxis.title.text
 
+    def test_plot_decays_trmc_auto_labels(self, decay_data):
+        fig = plot_decays(
+            decay_data["xs_data"],
+            decay_data["ys_data"],
+            "TRMC",
+        )
+        expected = ["Decay 1", "Decay 2"]
+        for trace, label in zip(fig.data, expected):
+            assert trace.name == label
+
     def test_plot_decays_with_fit(self, decay_data):
         fig = plot_decays(
             decay_data["xs_data"],

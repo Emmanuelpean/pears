@@ -209,11 +209,11 @@ class Model(object):
             for key in var:
                 variables[key].append(var[key])
 
-            if threshold > 0.0 and i > 1:
+            if threshold and i > 1:
                 ca = np.array([np.max(np.abs(variables[key][-2] - var[key]) / N_0) for key in self.conc_ca_ids])
                 if all(ca < threshold / 100):
                     break
-                elif i == p:
+                elif i == p - 1:
                     raise AssertionError("Attention: threshold condition never reached")
 
         return variables

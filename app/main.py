@@ -136,14 +136,19 @@ data_message = st.empty()
 xs_data, ys_data = [None], [None]
 if input_filename is not None:
     try:
-        xs_data, ys_data = load_data(input_filename.getvalue(), data_delimiter, data_format)
+        try:
+            xs_data, ys_data = load_data(input_filename.getvalue(), data_delimiter, data_format)
+        except:
+            raise ValueError("Unknown error, Check that the correct delimiter has been selected.")
 
-        # Check consistency
+        # Check number of arrays consistency
         if len(xs_data) != len(ys_data):
-            data_message.error("The number of X columns is not equal to the number of Y columns.")
-            raise AssertionError()
-        if any([len(x_data) == 0 for x_data in xs_data]) or any([len(y_data) == 0 for y_data in ys_data]):
-            raise AssertionError()
+            raise ValueError("Mismatch: x data and y data must have the same number of columns.")
+
+        # Check length arrays consistency
+        for i, (x, y) in enumerate(zip(xs_data, ys_data)):
+            if len(x) != len(y):
+                raise ValueError(f"Mismatch at index {i + 1}: x and y columns must have the same length.")
 
         # Process the data
         if process_input:
@@ -151,9 +156,9 @@ if input_filename is not None:
 
         data_message.success("Data successfully loaded")
 
-    except:  # if an error occurs during the file reading
+    except Exception as e:  # if an error occurs during the file reading
         xs_data, ys_data = [None], [None]
-        data_message.error("Uh-oh! The data could not be loaded")
+        data_message.error(f"Uh-oh! The data could not be loaded. Error: {e}")
 
 else:
     data_message.info("Load a data file")
@@ -165,7 +170,7 @@ if diff_cond1 or diff_cond2:
     reset_all()
     st.session_state.data = [xs_data, ys_data]
 
-if st.session_state.data[0] == [None]:
+if st.session_state.data[0][0] is None:
     logo_placeholder.markdown(render_image(resources.LOGO_TEXT_PATH, 50), unsafe_allow_html=True)  # main logo
 
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
@@ -335,7 +340,9 @@ if st.session_state.ran:
                 fit_output = model.fit(xs_data, ys_data, N0s)
                 st.session_state.results = copy.deepcopy([fit_output, model, N0s])
             except ValueError:
-                info_message.error("Uh Oh, the data could not be fitted. Try changing the parameter guess values.")
+                info_message.error(
+                    "Uh Oh, the data could not be fitted. Try changing the parameter guess or fixed values."
+                )
                 raise AssertionError("Fit failed")
         else:
             progressbar = st.sidebar.progress(0)

@@ -290,3 +290,6 @@ class TestAreListsIdentical:
 
         list3 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 5.0])}]
         assert not are_identical(list1, list3)
+
+    def test_different_keys_dicts(self):
+        assert not are_identical({"a": 1}, {"b": 2})

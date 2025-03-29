@@ -116,6 +116,12 @@ class TestFilterDicts:
         result = filter_dicts(dicts, ["a >= b"])
         assert result == []
 
+    def test_invalid_inequality(self):
+
+        with pytest.raises(ValueError):
+            dicts = [{"a": 1, "b": 5}, {"a": 3, "b": 7}]
+            filter_dicts(dicts, ["a f b"])
+
 
 class TestListToDict:
 

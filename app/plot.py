@@ -200,7 +200,7 @@ def parallel_plot(
     return xp
 
 
-class _StreamlitHelpers:
+class _StreamlitHelpers:  # pragma: no cover
     component: tp.Optional[tp.Callable[..., tp.Any]] = None
 
     @staticmethod
@@ -245,9 +245,3 @@ See https://facebookresearch.github.io/hiplot/contributing.html#building-javascr
 
 # Fix hiplot compatibility issues
 hiplot.streamlit_helpers._StreamlitHelpers = _StreamlitHelpers
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
