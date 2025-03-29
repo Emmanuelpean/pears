@@ -1,4 +1,4 @@
-name: Build and Deploy Code
+name: Test Code
 on: [push, pull_request]
 jobs:
   build:
