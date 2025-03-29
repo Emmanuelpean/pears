@@ -38,6 +38,9 @@ jobs:
           format: markdown
           output: both
 
+      - name: List Files for Debugging
+        run: ls -alh  # Debugging step to see if badge exists
+
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         with:
@@ -50,7 +53,7 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Ensure the badge is generated and exists
+          # Check if the badge exists and move to root if necessary
           if [ -f coverage-badge.svg ]; then
             mv coverage-badge.svg ./coverage-badge.svg  # Move to root if needed
             git add coverage-badge.svg
