@@ -30,35 +30,30 @@ jobs:
           coverage run -m pytest -vv
           coverage xml
 
-      - name: Generate Code Coverage Summary
-        uses: irongut/CodeCoverageSummary@v1.3.0
-        with:
-          filename: coverage.xml
-          badge: true
-          format: markdown
-          output: both
-
-      - name: List Files for Debugging
-        run: ls -alh  # Debugging step to see if badge exists
-
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage.xml
 
+      - name: Extract Coverage Percentage
+        id: coverage
+        run: |
+          coverage_percentage=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); total_lines = int(root.attrib['lines']); covered_lines = int(root.attrib['covered']); print(int((covered_lines / total_lines) * 100))")
+          echo "coverage_percentage=$coverage_percentage" >> $GITHUB_ENV
+
+      - name: Generate Coverage Badge using Shields.io
+        run: |
+          curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${{ env.coverage_percentage }}%25-green"
+
       - name: Commit Coverage Badge
         run: |
           # Set up git to commit the badge
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # Check if the badge exists and move to root if necessary
-          if [ -f coverage-badge.svg ]; then
-            mv coverage-badge.svg ./coverage-badge.svg  # Move to root if needed
-            git add coverage-badge.svg
-            git commit -m "Update coverage badge"
-            git push
-          else
-            echo "No coverage badge found, skipping commit."
-          fi
+
+          # Commit the generated badge
+          mv coverage-badge.svg ./coverage-badge.svg
+          git add coverage-badge.svg
+          git commit -m "Update coverage badge"
+          git push
