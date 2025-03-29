@@ -56,7 +56,7 @@ jobs:
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.PYTEST_COVERAGE_COMMENT }}
-          gistID: 5e90d640f8c212ab7bbac38f72323f80
+          gistID: 3d13cd09334063855921d2537ee75916
           filename: pytest-coverage-comment__main.json
           label: Coverage Report
           message: ${{ steps.coverageComment.outputs.coverage }}
