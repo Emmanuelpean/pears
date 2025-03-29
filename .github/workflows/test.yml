@@ -46,9 +46,13 @@ jobs:
 
       - name: Commit Coverage Badge
         run: |
+          # Set up git to commit the badge
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Ensure the badge is generated and exists
           if [ -f coverage-badge.svg ]; then
+            mv coverage-badge.svg ./coverage-badge.svg  # Move to root if needed
             git add coverage-badge.svg
             git commit -m "Update coverage badge"
             git push
