@@ -27,7 +27,7 @@ jobs:
 
       - name: Run tests with pytest and coverage
         run: |
-          python -m pytest --cov=your_package_name --cov-report=xml:pytest-coverage.txt --junitxml=pytest.xml
+          python -m pytest --cov=. --cov-report=term --cov-report=pytest-coverage.txt --junitxml=pytest.xml
 
       - name: Pytest coverage comment
         id: coverageComment
