@@ -172,7 +172,7 @@ class Model(object):
 
     # -------------------------------------------------- CORE METHODS --------------------------------------------------
 
-    def _rate_equations(self, *args, **kwargs) -> dict:
+    def _rate_equations(self, *args, **kwargs) -> dict[str, float]:
         """Rate equation method"""
 
         return {}
@@ -195,7 +195,7 @@ class Model(object):
         var = {key: np.zeros(len(t)) for key in self.n_keys}
         variables = {key: [] for key in self.n_keys}
 
-        def rate_equation(x, _t):
+        def rate_equation(x, _t) -> list[float]:
             """Rate equation wrapper"""
 
             dndt = self._rate_equations(*x, **kwargs)
@@ -612,10 +612,10 @@ class BTModel(Model):
 
 class BTModelTRPL(BTModel):
 
-    def __init__(self):
+    def __init__(self) -> None:
         BTModel.__init__(self, ["k_T", "k_B", "k_A", "y_0", "I"])
 
-    def calculate_fit_quantity(self, *args, **kwargs):
+    def calculate_fit_quantity(self, *args, **kwargs) -> np.ndarray:
 
         return self.calculate_trpl(*args, **kwargs)
 
@@ -641,7 +641,7 @@ class BTModelTRPL(BTModel):
         S = T + B + A
         return {"T": T / S * 100, "B": B / S * 100, "A": A / S * 100}
 
-    def generate_decays(self, *args, **kwargs):
+    def generate_decays(self, *args, **kwargs) -> tuple[list[np.ndarray], list[np.ndarray], list[float]]:
         """Generate decays.
         :param args: arguments passed to _generate_decays.
         :param kwargs: keyword arguments passed to _generate_decays."""
@@ -651,10 +651,10 @@ class BTModelTRPL(BTModel):
 
 class BTModelTRMC(BTModel):
 
-    def __init__(self):
+    def __init__(self) -> None:
         BTModel.__init__(self, ["k_T", "k_B", "k_A", "mu", "y_0"])
 
-    def calculate_fit_quantity(self, *args, **kwargs):
+    def calculate_fit_quantity(self, *args, **kwargs) -> np.ndarray:
 
         return self.calculate_trmc(*args, **kwargs)
 
@@ -682,7 +682,7 @@ class BTModelTRMC(BTModel):
         S = T + B + A
         return {"T": T / S * 100, "B": B / S * 100, "A": A / S * 100}
 
-    def generate_decays(self, *args, **kwargs):
+    def generate_decays(self, *args, **kwargs) -> tuple[list[np.ndarray], list[np.ndarray], list[float]]:
         """Generate decays.
         :param args: arguments passed to _generate_decays.
         :param kwargs: keyword arguments passed to _generate_decays."""
@@ -696,7 +696,7 @@ class BTModelTRMC(BTModel):
 class BTDModel(Model):
     """Class for the Bimolecular-Trapping-Detrapping model"""
 
-    def __init__(self, param_ids):
+    def __init__(self, param_ids) -> None:
 
         units = {
             "N_T": "cm-3",
@@ -873,10 +873,10 @@ class BTDModel(Model):
 
 class BTDModelTRPL(BTDModel):
 
-    def __init__(self):
+    def __init__(self) -> None:
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "y_0", "I"])
 
-    def calculate_fit_quantity(self, *args, **kwargs):
+    def calculate_fit_quantity(self, *args, **kwargs) -> np.ndarray:
 
         return self.calculate_trpl(*args, **kwargs)
 
@@ -910,7 +910,7 @@ class BTDModelTRPL(BTDModel):
         S = T + B + D
         return {"T": T / S * 100, "B": B / S * 100, "D": D / S * 100}
 
-    def generate_decays(self, *args, **kwargs):
+    def generate_decays(self, *args, **kwargs) -> tuple[list[np.ndarray], list[np.ndarray], list[float]]:
         """Generate decays.
         :param args: arguments passed to _generate_decays.
         :param kwargs: keyword arguments passed to _generate_decays."""
@@ -920,10 +920,10 @@ class BTDModelTRPL(BTDModel):
 
 class BTDModelTRMC(BTDModel):
 
-    def __init__(self):
+    def __init__(self) -> None:
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "mu_e", "mu_h", "y_0"])
 
-    def calculate_fit_quantity(self, *args, **kwargs):
+    def calculate_fit_quantity(self, *args, **kwargs) -> np.ndarray:
 
         return self.calculate_trmc(*args, **kwargs)
 
@@ -961,7 +961,7 @@ class BTDModelTRMC(BTDModel):
         S = T + B + D
         return {"T": T / S * 100, "B": B / S * 100, "D": D / S * 100}
 
-    def generate_decays(self, *args, **kwargs):
+    def generate_decays(self, *args, **kwargs) -> tuple[list[np.ndarray], list[np.ndarray], list[float]]:
         """Generate decays.
         :param args: arguments passed to _generate_decays.
         :param kwargs: keyword arguments passed to _generate_decays."""

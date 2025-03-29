@@ -55,7 +55,7 @@ def render_image(
 
 
 def generate_download_link(
-    data: tuple[list[np.ndarray], list[np.ndarray]],
+    data: tuple,
     header: None | list[str] | np.ndarray = None,
     text: str = "",
     name: str | None = None,
@@ -123,7 +123,7 @@ def are_identical(
             return np.array_equal(obj1, obj2)
 
 
-def are_close(*args, rtol=1e-3):
+def are_close(*args, rtol=1e-3) -> bool:
     """Check if two objects are similar"""
 
     return are_identical(*args, rtol=rtol)

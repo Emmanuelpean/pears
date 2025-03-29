@@ -38,7 +38,7 @@ def assert_fit(
 class TestModel:
 
     @pytest.fixture
-    def model(self):
+    def model(self) -> Model:
 
         param_ids = ["k_B", "k_T", "k_A", "y_0"]
         units = {"k_B": "cm^3/ns", "k_T": "1/ns", "k_A": "cm^6/ns"}
@@ -51,7 +51,7 @@ class TestModel:
         conc_ca_ids = ["n"]
         param_filters = []
 
-        def n_init(N_0):  # pragma: no cover
+        def n_init(N_0) -> dict[str, float]:  # pragma: no cover
             return {"n": N_0}
 
         return Model(
@@ -68,23 +68,23 @@ class TestModel:
             param_filters,
         )
 
-    def test_initialisation(self, model):
+    def test_initialisation(self, model) -> None:
 
         assert model.param_ids == ["k_B", "k_T", "k_A", "y_0"]
         assert model.units["k_B"] == "cm^3/ns"
         assert model.n_keys == ["n"]
         assert model.fvalues["k_B"] == 1e-18
 
-    def test_get_parameter_label(self, model):
+    def test_get_parameter_label(self, model) -> None:
 
         assert model.get_parameter_label("k_B") == "k_B (cm^3/ns)"
         assert model.get_parameter_label("y_0") == "y_0"
 
-    def test_fixed_values(self, model):
+    def test_fixed_values(self, model) -> None:
 
         assert model.fixed_values == {"k_B": 1e-18, "y_0": 0.0}
 
-    def test_eq(self, model):
+    def test_eq(self, model) -> None:
 
         model2 = model
         assert model == model2
@@ -104,7 +104,7 @@ class TestModel:
         )
         assert model != model3
 
-    def test_get_rec_string(self, model):
+    def test_get_rec_string(self, model) -> None:
 
         expected = "This fit predicts low Auger. The values associated with this process may be inaccurate."
         expected2 = (
@@ -114,19 +114,19 @@ class TestModel:
         assert model.get_contribution_recommendation("Auger") == expected
         assert model.get_contribution_recommendation("Auger", "higher") == expected2
 
-    def test_rate_equations(self, model):
+    def test_rate_equations(self, model) -> None:
 
         assert model._rate_equations() == {}
 
-    def test_calculate_contributions(self, model):
+    def test_calculate_contributions(self, model) -> None:
 
         assert model.calculate_contributions() == {}
 
-    def test_calculate_fit_quantity(self, model):
+    def test_calculate_fit_quantity(self, model) -> None:
 
         assert model.calculate_fit_quantity() == np.array([0])
 
-    def test_get_contribution_recommendations(self, model):
+    def test_get_contribution_recommendations(self, model) -> None:
 
         assert model.get_contribution_recommendations() == [""]
 
@@ -134,22 +134,22 @@ class TestModel:
 class TestBTModel:
 
     @pytest.fixture
-    def model(self):
+    def model(self) -> BTModel:
 
         return BTModel(["k_T", "k_B", "k_A", "mu", "y_0"])
 
-    def test_initialization(self, model):
+    def test_initialization(self, model) -> None:
 
         assert model.param_ids == ["k_T", "k_B", "k_A", "mu", "y_0"]
         assert model.units["k_B"] == "cm3/ns"
         assert model.factors["k_T"] == 1e-3
 
-    def test_rate_equations(self, model):
+    def test_rate_equations(self, model) -> None:
 
         rates = model._rate_equations(n=1e17, **BT_KWARGS)
         assert np.isclose(rates["n"], -6000100000000000.0)
 
-    def test_calculate_concentrations(self, model):
+    def test_calculate_concentrations(self, model) -> None:
 
         # Single pulse
         output = model._calculate_concentrations(T, 1e17, **BT_KWARGS)
@@ -164,7 +164,7 @@ class TestBTModel:
         with pytest.raises(AssertionError):
             model._calculate_concentrations(T, 1e17, **BT_KWARGS, p=3)
 
-    def test_get_carrier_concentrations(self, model):
+    def test_get_carrier_concentrations(self, model) -> None:
 
         popts = [{"I": 1.0, "N_0": 1e17, **BT_KWARGS}]
 
@@ -178,7 +178,7 @@ class TestBTModel:
         assert np.allclose(output2[2][0]["n"][:3], np.array([1.00000000e17, 9.43127550e16, 8.91893621e16]))
         assert np.allclose(output2[0][0][:3], np.array([0.0, 1.0, 2.0]))
 
-    def test_get_contribution_recommendations(self, model):
+    def test_get_contribution_recommendations(self, model) -> None:
 
         contributions = {"T": np.array([5.0]), "B": np.array([5.0]), "A": np.array([0])}
         recs = model.get_contribution_recommendations(contributions)
@@ -202,12 +202,12 @@ class TestBTModel:
         ]
         assert recs == expected
 
-    def test_calculate_trpl(self, model):
+    def test_calculate_trpl(self, model) -> None:
 
         result = model.calculate_trpl(T, N_0=1e17, **BT_KWARGS)
         assert np.allclose(result[:3], np.array([1.0, 0.88948958, 0.79547423]))
 
-    def test_calculate_trmc(self, model):
+    def test_calculate_trmc(self, model) -> None:
 
         result = model.calculate_trmc(T, N_0=1e17, **BT_KWARGS)
         assert np.allclose(result[:3], np.array([20.0, 18.86255101, 17.83787242]))
@@ -215,12 +215,12 @@ class TestBTModel:
 
 class TestBTModelTRPL:
 
-    def test_calculate_fit_quantity(self):
+    def test_calculate_fit_quantity(self) -> None:
 
         result = BTModelTRPL().calculate_fit_quantity(T, N_0=1e17, **BT_KWARGS)
         assert np.allclose(result[:3], np.array([1.0, 0.88948958, 0.79547423]))
 
-    def test_calculate_contributions(self):
+    def test_calculate_contributions(self) -> None:
 
         concentrations = BTModelTRPL()._calculate_concentrations(T, 1e16, **BT_KWARGS)
         concentrations = {key: value[0] for key, value in concentrations.items()}
@@ -232,7 +232,7 @@ class TestBTModelTRPL:
         }
         assert are_close(contributions, expected)
 
-    def test_get_carrier_accumulation(self):
+    def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BT_KWARGS} for n in N0s]
@@ -247,7 +247,7 @@ class TestBTModelTRPL:
         expected = [np.float64(4.931657664085842), np.float64(0.8414419278757801)]
         assert are_close(output, expected)
 
-    def test_generate_decays(self):
+    def test_generate_decays(self) -> None:
 
         # Without noise
         xs_data, ys_data, N0s = BTModelTRPL().generate_decays()
@@ -259,7 +259,7 @@ class TestBTModelTRPL:
         assert are_close(ys_data[0][:3], [0.96980343, 1.0, 0.98891807])
         assert are_close(ys_data[-1][:3], [1.0, 0.95023039, 0.95215302])
 
-    def test_fit(self):
+    def test_fit(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -342,7 +342,7 @@ class TestBTModelTRPL:
         }
         assert_fit(fit, popt_expected, contribution_expected, 1.0)
 
-    def test_grid_fitting(self):
+    def test_grid_fitting(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -452,12 +452,12 @@ class TestBTModelTRPL:
 
 class TestBTModelTRMC:
 
-    def test_calculate_fit_quantity(self):
+    def test_calculate_fit_quantity(self) -> None:
 
         result = BTModelTRMC().calculate_trmc(T, N_0=1e17, **BT_KWARGS)
         assert np.allclose(result[:3], np.array([20.0, 18.86255101, 17.83787242]))
 
-    def test_calculate_contributions(self):
+    def test_calculate_contributions(self) -> None:
 
         concentrations = BTModelTRMC()._calculate_concentrations(T, 1e16, **BT_KWARGS)
         concentrations = {key: value[0] for key, value in concentrations.items()}
@@ -469,7 +469,7 @@ class TestBTModelTRMC:
         }
         assert are_close(contributions, expected)
 
-    def test_get_carrier_accumulation(self):
+    def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, "mu": 10, **BT_KWARGS} for n in N0s]
@@ -484,7 +484,7 @@ class TestBTModelTRMC:
         expected = [np.float64(4.161872397435568), np.float64(0.7099465316118103)]
         assert are_close(output, expected)
 
-    def test_generate_decays(self):
+    def test_generate_decays(self) -> None:
 
         # Without noise
         xs_data, ys_data, N0s = BTModelTRMC().generate_decays()
@@ -496,7 +496,7 @@ class TestBTModelTRMC:
         assert are_close(ys_data[0][:3], [19.57021361, 20.07543598, 19.74939803])
         assert are_close(ys_data[-1][:3], [20.14851545, 18.5957746, 18.1731914])
 
-    def test_fit(self):
+    def test_fit(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -560,7 +560,7 @@ class TestBTModelTRMC:
         expected_cod = 1.0
         assert_fit(fit, popt_expected, contribution_expected, expected_cod)
 
-    def test_grid_fitting(self):
+    def test_grid_fitting(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -679,22 +679,22 @@ class TestBTModelTRMC:
 class TestBTDModel:
 
     @pytest.fixture
-    def model(self):
+    def model(self) -> BTDModel:
 
         return BTDModel(["k_B", "k_T", "k_D", "N_T", "p_0", "mu_e", "mu_h"])
 
-    def test_initialization(self, model):
+    def test_initialization(self, model) -> None:
 
         assert model.units["k_B"] == "cm3/ns"
         assert model.factors["k_B"] == 1e-20
         assert model.n_keys == ["n_e", "n_t", "n_h"]
 
-    def test_rate_equations(self, model):
+    def test_rate_equations(self, model) -> None:
 
         result = model._rate_equations(n_e=1e17, n_t=1e12, n_h=1e17, **BTD_KWARGS)
         assert result == {"n_e": -5711250000000000.0, "n_t": 707919948000000.0, "n_h": -5003330052000000.0}
 
-    def test_calculate_concentrations(self, model):
+    def test_calculate_concentrations(self, model) -> None:
 
         # Single pulse
         output = model._calculate_concentrations(T, 1e17, **BTD_KWARGS)
@@ -715,7 +715,7 @@ class TestBTDModel:
         with pytest.raises(AssertionError):
             model._calculate_concentrations(T, 1e17, **BTD_KWARGS, p=3)
 
-    def test_get_carrier_concentrations(self, model):
+    def test_get_carrier_concentrations(self, model) -> None:
 
         popts = [{"I0": 1.0, "N_0": 1e17, **BTD_KWARGS}]
 
@@ -733,7 +733,7 @@ class TestBTDModel:
         assert np.allclose(output2[2][0]["n_h"][:3], np.array([1.00000000e17, 9.52335458e16, 9.09004697e16]))
         assert np.allclose(output2[0][0][:3], np.array([0.0, 1.0, 2.0]))
 
-    def test_get_contribution_recommendations(self, model):
+    def test_get_contribution_recommendations(self, model) -> None:
 
         contributions = {"B": np.array([5]), "T": np.array([5]), "D": np.array([8])}
         recs = model.get_contribution_recommendations(contributions)
@@ -750,12 +750,12 @@ class TestBTDModel:
         ]
         assert recs == expected
 
-    def test_calculate_trpl(self, model):
+    def test_calculate_trpl(self, model) -> None:
 
         result = model.calculate_trpl(T, N_0=1e15, **BTD_KWARGS)
         assert np.allclose(result[:3], np.array([1.0, 0.99221134, 0.98523199]))
 
-    def test_calculate_trmc(self, model):
+    def test_calculate_trmc(self, model) -> None:
 
         result = model.calculate_trmc(T, N_0=1e17, **BTD_KWARGS)
         assert np.allclose(result[:3], np.array([50.0, 47.60485258, 45.43831441]))
@@ -763,12 +763,12 @@ class TestBTDModel:
 
 class TestBTDModelTRPL:
 
-    def test_calculate_fit_quantity(self):
+    def test_calculate_fit_quantity(self) -> None:
 
         result = BTDModelTRPL().calculate_fit_quantity(T, N_0=1e15, **BTD_KWARGS)
         assert np.allclose(result[:3], np.array([1.0, 0.99221134, 0.98523199]))
 
-    def test_calculate_contributions(self):
+    def test_calculate_contributions(self) -> None:
 
         concentrations = BTDModelTRPL()._calculate_concentrations(T, 1e15, **BTD_KWARGS)
         concentrations = {key: value[0] for key, value in concentrations.items()}
@@ -780,7 +780,7 @@ class TestBTDModelTRPL:
         }
         assert contributions == expected
 
-    def test_get_carrier_accumulation(self):
+    def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BTD_KWARGS} for n in N0s]
@@ -795,7 +795,7 @@ class TestBTDModelTRPL:
         expected = [np.float64(7.852802160625521), np.float64(1.1155396319428357)]
         assert are_close(output, expected)
 
-    def test_generate_decays(self):
+    def test_generate_decays(self) -> None:
 
         # Without noise
         xs_data, ys_data, N0s = BTDModelTRPL().generate_decays()
@@ -807,7 +807,7 @@ class TestBTDModelTRPL:
         assert are_close(ys_data[0][:3], [1.0, 0.96670037, 0.89900986])
         assert are_close(ys_data[-1][:3], [1.0, 0.98174779, 0.93649283])
 
-    def test_fit(self):
+    def test_fit(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -877,7 +877,7 @@ class TestBTDModelTRPL:
         expected_cod = 0.9221545665271867
         assert_fit(fit, popt_expected, contribution_expected, expected_cod)
 
-    def test_grid_fitting(self):
+    def test_grid_fitting(self) -> None:
 
         model = BTDModelTRPL()
         model.gvalues_range["k_B"] = [1e-20]
@@ -1006,12 +1006,12 @@ class TestBTDModelTRPL:
 
 class TestBTDModelTRMC:
 
-    def test_calculate_fit_quantity(self):
+    def test_calculate_fit_quantity(self) -> None:
 
         result = BTDModelTRMC().calculate_fit_quantity(T, N_0=1e17, **BTD_KWARGS)
         assert np.allclose(result[:3], np.array([50.0, 47.60485258, 45.43831441]))
 
-    def test_calculate_contributions(self):
+    def test_calculate_contributions(self) -> None:
 
         concentrations = BTDModelTRMC()._calculate_concentrations(T, 1e15, **BTD_KWARGS)
         concentrations = {key: value[0] for key, value in concentrations.items()}
@@ -1023,7 +1023,7 @@ class TestBTDModelTRMC:
         }
         assert contributions == expected
 
-    def test_get_carrier_accumulation(self):
+    def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
         popts = [{"N_0": n, **BTD_KWARGS} for n in N0s]
@@ -1038,7 +1038,7 @@ class TestBTDModelTRMC:
         expected = [np.float64(6.63910507746735), np.float64(0.9422743536986633)]
         assert are_close(output, expected)
 
-    def test_generate_decays(self):
+    def test_generate_decays(self) -> None:
 
         # Without noise
         xs_data, ys_data, N0s = BTDModelTRMC().generate_decays()
@@ -1050,7 +1050,7 @@ class TestBTDModelTRMC:
         assert are_close(ys_data[0][:3], [48.92553402, 45.17205085, 41.50080638])
         assert are_close(ys_data[-1][:3], [49.25755246, 45.85575692, 41.50440705])
 
-    def test_fit(self):
+    def test_fit(self) -> None:
 
         # -------------------------------------------------- NO NOISE --------------------------------------------------
 
@@ -1098,7 +1098,7 @@ class TestBTDModelTRMC:
         expected_cod = 0.9072435319931186
         assert_fit(fit, popt_expected, contribution_expected, expected_cod)
 
-    def test_grid_fitting(self):
+    def test_grid_fitting(self) -> None:
 
         model = BTDModelTRMC()
         model.gvalues_range["k_B"] = [1e-20]

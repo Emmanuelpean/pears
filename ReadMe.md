@@ -3,10 +3,10 @@
 </p>
 <p align="center">
 <a href="https://github.com/Emmanuelpean/pears/actions?query=branch%3Amaster+event%3Apush" target="_blank">
-    <img src="https://github.com/emmanuelpean/pears/actions/workflows/test.yml/badge.svg?event=push&branch=master" alt="Test">
+    <img src="https://github.com/emmanuelpean/pears/actions/workflows/test.yml/badge.svg?event=push&branch=development" alt="Test">
 </a>
-<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/emmanuelpean/pears" target="_blank">
-    <img src="./coverage-badge.svg" alt="Coverage">
+<a>
+    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/emmanuelpean/3d13cd09334063855921d2537ee75916/raw/pytest-coverage-comment__main.json" alt="Coverage">
 </a>
 </p>
 

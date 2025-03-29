@@ -7,17 +7,17 @@ from app.plot import parallel_plot, plot_carrier_concentrations, plot_decays, su
 
 
 class TestSubplots:
-    def test_simple_subplot_creation(self):
+    def test_simple_subplot_creation(self) -> None:
         fig, positions = subplots(3)
         assert isinstance(fig, go.Figure)
         assert positions == [(1, 1), (2, 1), (3, 1)]
 
-    def test_subplot_with_max_columns(self):
+    def test_subplot_with_max_columns(self) -> None:
         fig, positions = subplots(9, 2)
         assert isinstance(fig, go.Figure)
         assert positions == [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1), (3, 2), (4, 1), (4, 2), (5, 1)]
 
-    def test_subplot_with_kwargs(self):
+    def test_subplot_with_kwargs(self) -> None:
         fig, positions = subplots(4, subplot_titles=["A", "B", "C", "D"])
         assert isinstance(fig, go.Figure)
         assert positions == [(1, 1), (1, 2), (2, 1), (2, 2)]
@@ -26,7 +26,7 @@ class TestSubplots:
 class TestPlotDecays:
 
     @pytest.fixture
-    def decay_data(self):
+    def decay_data(self) -> dict[str, list]:
         return {
             "xs_data": [np.array([1, 2, 3]), np.array([1, 2, 3])],
             "ys_data": [np.array([10, 5, 2]), np.array([8, 4, 1])],
@@ -34,7 +34,7 @@ class TestPlotDecays:
             "labels": ["Sample A", "Sample B"],
         }
 
-    def test_plot_decays_trpl(self, decay_data):
+    def test_plot_decays_trpl(self, decay_data) -> None:
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -48,7 +48,7 @@ class TestPlotDecays:
         assert "Time (ns)" in fig.layout.xaxis.title.text
         assert "Intensity (a.u.)" in fig.layout.yaxis.title.text
 
-    def test_plot_decays_trmc(self, decay_data):
+    def test_plot_decays_trmc(self, decay_data) -> None:
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -60,7 +60,7 @@ class TestPlotDecays:
         assert "Time (ns)" in fig.layout.xaxis.title.text
         assert "Intensity (cm<sup>2</sup>/(Vs))" in fig.layout.yaxis.title.text
 
-    def test_plot_decays_trmc_auto_labels(self, decay_data):
+    def test_plot_decays_trmc_auto_labels(self, decay_data) -> None:
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -70,7 +70,7 @@ class TestPlotDecays:
         for trace, label in zip(fig.data, expected):
             assert trace.name == label
 
-    def test_plot_decays_with_fit(self, decay_data):
+    def test_plot_decays_with_fit(self, decay_data) -> None:
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -89,7 +89,7 @@ class TestPlotDecays:
 
 
 class SimpleCarrierModel:
-    def __init__(self):
+    def __init__(self) -> None:
         self.CONC_LABELS_HTML = {"e": "Electrons", "h": "Holes"}
         self.CONC_COLORS = {"e": "blue", "h": "red"}
 
@@ -97,7 +97,7 @@ class SimpleCarrierModel:
 class TestPlotCarrierConcentrations:
 
     @pytest.fixture
-    def carrier_data(self):
+    def carrier_data(self) -> dict:
 
         model = SimpleCarrierModel()
 
@@ -120,7 +120,7 @@ class TestPlotCarrierConcentrations:
             "xlabel": xlabel,
         }
 
-    def test_plot_carrier_concentrations(self, carrier_data):
+    def test_plot_carrier_concentrations(self, carrier_data) -> None:
         fig = plot_carrier_concentrations(
             carrier_data["xs_data"],
             carrier_data["ys_data"],
@@ -154,7 +154,7 @@ class TestPlotCarrierConcentrations:
 
 
 class TestParallelPlot:
-    def test_basic_plot(self):
+    def test_basic_plot(self) -> None:
 
         data = [
             {"a": 1, "b": 2},
@@ -169,7 +169,7 @@ class TestParallelPlot:
         assert xp.datapoints[0].values["ID"] == 1
         assert xp.datapoints[1].values["ID"] == 2
 
-    def test_hide_and_order(self):
+    def test_hide_and_order(self) -> None:
 
         data = [{"x": 10, "y": 20, "z": 30}]
         hidden_keys = ["y"]

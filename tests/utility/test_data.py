@@ -5,39 +5,39 @@ from app.utility.data import *
 
 class TestMatrixToString:
 
-    def test_basic_conversion(self):
+    def test_basic_conversion(self) -> None:
         arrays = [np.array([1.2, 2, 5]), np.array([1.6, 2])]
         header = ["A", "B"]
         result = matrix_to_string(arrays, header)
         expected = "A,B\n1.20000E+00,1.60000E+00\n2.00000E+00,2.00000E+00\n5.00000E+00,"
         assert result == expected
 
-    def test_no_header(self):
+    def test_no_header(self) -> None:
         arrays = [np.array([1.2, 2, 5]), np.array([1.6, 2])]
         result = matrix_to_string(arrays)
         expected = "1.20000E+00,1.60000E+00\n2.00000E+00,2.00000E+00\n5.00000E+00,"
         assert result == expected
 
-    def test_single_column(self):
+    def test_single_column(self) -> None:
         arrays = [np.array([1.2, 2, 5])]
         result = matrix_to_string(arrays, ["A"])
         expected = "A\n1.20000E+00\n2.00000E+00\n5.00000E+00"
         assert result == expected
 
-    def test_mixed_lengths(self):
+    def test_mixed_lengths(self) -> None:
         arrays = [np.array([1.2, 2]), np.array([1.6])]
         header = ["A", "B"]
         result = matrix_to_string(arrays, header)
         expected = "A,B\n1.20000E+00,1.60000E+00\n2.00000E+00,"
         assert result == expected
 
-    def test_all_empty(self):
+    def test_all_empty(self) -> None:
         arrays = [np.array([]), np.array([])]
         header = ["A", "B"]
         result = matrix_to_string(arrays, header)
         assert result == "A,B\n"
 
-    def test_no_trailing_comma(self):
+    def test_no_trailing_comma(self) -> None:
         arrays = [np.array([1.2, 2]), np.array([1.6, 2])]
         header = ["A", "B"]
         result = matrix_to_string(arrays, header)
@@ -47,7 +47,7 @@ class TestMatrixToString:
 
 class TestGenerateDownloadLink:
 
-    def test_basic_functionality(self):
+    def test_basic_functionality(self) -> None:
         """Test basic functionality of generate_download_link."""
         x_data = [np.array([1, 2, 3])]
         y_data = [np.array([4, 5, 6])]
@@ -57,7 +57,7 @@ class TestGenerateDownloadLink:
         assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
-    def test_no_header(self):
+    def test_no_header(self) -> None:
         """Test when no header is provided."""
         x_data = [np.array([1, 2, 3])]
         y_data = [np.array([4, 5, 6])]
@@ -66,7 +66,7 @@ class TestGenerateDownloadLink:
         assert '<a href="data:text/csv;base64,' in result
         assert "Download Data" in result
 
-    def test_with_special_characters(self):
+    def test_with_special_characters(self) -> None:
         """Test if the function handles special characters in the header and text."""
         x_data = [np.array([1, 2])]
         y_data = [np.array([3, 4])]
@@ -85,7 +85,7 @@ class TestGenerateDownloadLink:
         assert "Col#2" in decoded_string
         assert "Download with Special Characters" in result
 
-    def test_no_text_provided(self):
+    def test_no_text_provided(self) -> None:
         """Test if no text is provided (empty string)."""
         x_data = [np.array([1, 2, 3])]
         y_data = [np.array([4, 5, 6])]
@@ -95,7 +95,7 @@ class TestGenerateDownloadLink:
         assert 'href="data:text/csv;base64,' in result
         assert "Download" not in result  # Should not have any text if empty
 
-    def test_large_data(self):
+    def test_large_data(self) -> None:
         """Test with large data to check performance (no specific checks)."""
         x_data = [np.random.rand(100)]
         y_data = [np.random.rand(100)]
@@ -104,7 +104,7 @@ class TestGenerateDownloadLink:
         assert '<a href="data:text/csv;base64,' in result
         assert "Download Large Data" in result
 
-    def test_b64_encoding(self):
+    def test_b64_encoding(self) -> None:
         """Test to ensure base64 encoding is correct."""
         x_data = [np.array([1, 2, 3])]
         y_data = [np.array([4, 5, 6])]
@@ -117,7 +117,7 @@ class TestGenerateDownloadLink:
 class TestProcessData:
 
     @pytest.fixture
-    def gaussian_data(self):
+    def gaussian_data(self) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """Fixture to generate a Gaussian dataset with 20 data points."""
         # Generate Gaussian data with mean 0 and standard deviation 1
         n_points = 10
@@ -125,7 +125,7 @@ class TestProcessData:
         y_data = np.exp(-0.5 * (x_data**2))  # Gaussian function: e^(-x^2/2)
         return [x_data, x_data], [y_data, y_data * 2]
 
-    def test_no_normalisation(self, gaussian_data):
+    def test_no_normalisation(self, gaussian_data) -> None:
         """Test with no normalisation."""
         xs_data, ys_data = gaussian_data
 
@@ -142,7 +142,7 @@ class TestProcessData:
         assert np.allclose(result_xs, expected_xs)
         assert np.allclose(result_ys, expected_ys)
 
-    def test_with_normalisation(self, gaussian_data):
+    def test_with_normalisation(self, gaussian_data) -> None:
         """Test with normalisation."""
         xs_data, ys_data = gaussian_data
 
@@ -159,7 +159,7 @@ class TestProcessData:
         assert np.allclose(result_xs, expected_xs)
         assert np.allclose(result_ys, expected_ys)
 
-    def test_edge_case_empty_data(self):
+    def test_edge_case_empty_data(self) -> None:
         """Test with empty input data."""
         xs_data = []
         ys_data = []
@@ -174,37 +174,37 @@ class TestProcessData:
 
 class TestGetDataIndex:
 
-    def test_no_delimiter(self):
+    def test_no_delimiter(self) -> None:
         """Test without a delimiter (default None)"""
         content = ["header", "data starts here", "1 2 3", "4 5 6"]
         result = get_data_index(content)
         assert result == 2  # the first line with float data is at index 2
 
-    def test_with_delimiter(self):
+    def test_with_delimiter(self) -> None:
         """Test with a specified delimiter"""
         content = ["header", "data starts here", "1,2,3", "4,5,6"]
         result = get_data_index(content, delimiter=",")
         assert result == 2  # the first line with float data is at index 2
 
-    def test_no_data(self):
+    def test_no_data(self) -> None:
         """Test case when there are no float data lines"""
         content = ["header", "some text", "more text"]
         result = get_data_index(content)
         assert result is None  # No line contains float data
 
-    def test_empty_list(self):
+    def test_empty_list(self) -> None:
         """Test with an empty list"""
         content = []
         result = get_data_index(content)
         assert result is None  # No data in the list
 
-    def test_mixed_data(self):
+    def test_mixed_data(self) -> None:
         """Test with mixed data (some numeric and some non-numeric)"""
         content = ["header", "text", "1 2 3", "text again", "4 5 6"]
         result = get_data_index(content)
         assert result == 2  # the first line with numeric data is at index 2
 
-    def test_non_matching_delimiter(self):
+    def test_non_matching_delimiter(self) -> None:
         """Test with a delimiter that doesn't match any line"""
         content = ["header", "text", "1 2 3", "4 5 6"]
         result = get_data_index(content, delimiter=",")
@@ -213,7 +213,7 @@ class TestGetDataIndex:
 
 class TestLoadData:
 
-    def test_x_y1_y2_y3_format(self):
+    def test_x_y1_y2_y3_format(self) -> None:
         """Test the X/Y1/Y2/Y3... format where all columns have the same length"""
         content = "1 2 3 4\n5 6 7 8\n9 10 11 12\n"  # X/Y1/Y2/Y3 data format
         delimiter = " "
@@ -229,7 +229,7 @@ class TestLoadData:
         assert np.array_equal(xs_data, expected_xs)
         assert np.array_equal(ys_data, expected_ys)
 
-    def test_x1_y1_x2_y2_format(self):
+    def test_x1_y1_x2_y2_format(self) -> None:
         """Test the X1/Y1/X2/Y2... format where all columns have the same length"""
         content = "1,2,3,4\n5,6,7,8\n9,10,,\n"  # X/Y1/Y2/Y3 data format
         delimiter = ","
@@ -249,41 +249,41 @@ class TestLoadData:
 
 
 class TestAreListsIdentical:
-    def test_identical_lists(self):
+    def test_identical_lists(self) -> None:
         assert are_identical([1, 2, 3], [1, 2, 3])
 
-    def test_different_lists(self):
+    def test_different_lists(self) -> None:
         assert not are_identical([1, 2, 3], [1, 2, 4])
 
-    def test_nested_lists(self):
+    def test_nested_lists(self) -> None:
         assert are_identical([1, [2, 3], 4], [1, [2, 3], 4])
         assert not are_identical([1, [2, 3], 4], [1, [2, 4], 4])
 
-    def test_numpy_arrays(self):
+    def test_numpy_arrays(self) -> None:
         assert are_identical(np.array([1.0, 2.0]), np.array([1.0, 2.0]))
         assert not are_identical(np.array([1.0, 2.0]), np.array([1.0, 3.0]))
 
-    def test_allclose_with_atol(self):
+    def test_allclose_with_atol(self) -> None:
         arr1 = np.array([1.0, 2.0, 3.0])
         arr2 = np.array([1.0, 2.00000001, 3.0])
         assert are_identical(arr1, arr2, rtol=1e-7)
 
-    def test_identical_dicts(self):
+    def test_identical_dicts(self) -> None:
         dict1 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
         dict2 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
         assert are_identical(dict1, dict2)
 
-    def test_different_dicts(self):
+    def test_different_dicts(self) -> None:
         dict1 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
         dict2 = {"a": 1, "b": [2, 4], "c": np.array([1.0, 2.0])}
         assert not are_identical(dict1, dict2)
 
-    def test_dicts_with_allclose(self):
+    def test_dicts_with_allclose(self) -> None:
         dict1 = {"a": np.array([1.0, 2.0]), "b": np.array([3.0, 4.0])}
         dict2 = {"a": np.array([1.0, 2.00000001]), "b": np.array([3.0, 4.0])}
         assert are_identical(dict1, dict2, rtol=1e-7)
 
-    def test_list_of_dicts(self):
+    def test_list_of_dicts(self) -> None:
         list1 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 4.0])}]
         list2 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 4.0])}]
         assert are_identical(list1, list2)
@@ -291,5 +291,5 @@ class TestAreListsIdentical:
         list3 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 5.0])}]
         assert not are_identical(list1, list3)
 
-    def test_different_keys_dicts(self):
+    def test_different_keys_dicts(self) -> None:
         assert not are_identical({"a": 1}, {"b": 2})

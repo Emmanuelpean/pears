@@ -45,7 +45,7 @@ if "carrier_accumulation" not in st.session_state:
     st.session_state.carrier_accumulation = None  # carrier accumulation
 
 
-def reset_all():
+def reset_all() -> None:
     """Reset the stored values"""
     print("Resetting stored values")
     st.session_state.results = []
@@ -56,7 +56,7 @@ def reset_all():
 
 # Change the default style
 @st.cache_resource
-def set_style():
+def set_style() -> None:
     """Set the default style"""
 
     with open(resources.CSS_STYLE_PATH) as ofile:
