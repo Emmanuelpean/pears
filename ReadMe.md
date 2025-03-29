@@ -1,4 +1,14 @@
-![Tests](https://github.com/emmanuelpean/pears/actions/workflows/tests.yml/badge.svg)
+<p align="center">
+  <img src="https://github.com/Emmanuelpean/pears/blob/development/resources/medias/logo_text.svg" alt="Pears">
+</p>
+<p align="center">
+<a href="https://github.com/Emmanuelpean/pears/actions?query=branch%3Amaster+event%3Apush" target="_blank">
+    <img src="https://github.com/emmanuelpean/pears/actions/workflows/test.yml/badge.svg?event=push&branch=master" alt="Test">
+</a>
+<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/emmanuelpean/pears" target="_blank">
+    <img src="./coverage-badge.svg" alt="Coverage">
+</a>
+</p>
 
 MIT License
 
