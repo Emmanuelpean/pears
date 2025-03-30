@@ -10,6 +10,8 @@ Carrier accumulation is reset if
 Changing any other value does not re-run the fit but displays a message about it"""
 
 import copy
+import sys
+import os
 
 import numpy as np
 import pandas as pd
@@ -24,6 +26,7 @@ from utility.numbers import get_power_labels, to_scientific
 __version__ = "0.4.0"
 __date__ = "March 2025"
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
