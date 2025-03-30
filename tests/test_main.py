@@ -237,24 +237,32 @@ class TestApp:
         at.run()
 
         # Change the fixed value to an incorrect value
+        at.sidebar.text_input[3].set_value("3")
+        at.run()
         at.sidebar.text_input[3].set_value("f")
         at.run()
 
-        assert at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] != "f"
+        assert at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] == 3
 
         # Change the guess value to an incorrect value
-        at.sidebar.text_input[4].set_value("f")
+        at.sidebar.text_input[3].set_value("")  # reset the fixed value
+        at.run()
+        at.sidebar.text_input[4].set_value("3")  # set the guess value
+        at.run()
+        at.sidebar.text_input[4].set_value("f")  # set the guess value with incorrect string
         at.run()
 
-        assert at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] != "f"
+        assert at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] == 3
 
         # Change the fixed value range to an incorrect value
         at.sidebar.selectbox[0].set_value("Grid Fitting")
         at.run()
+        at.sidebar.text_input[4].set_value("2,5,6")
+        at.run()
         at.sidebar.text_input[4].set_value("2,5,f")
         at.run()
 
-        assert at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] != "f"
+        assert at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] == [2.0, 5.0, 6.0]
 
     @patch("streamlit.sidebar.file_uploader")
     def test_bad_fitting(self, mock_file_uploader: MagicMock) -> None:
@@ -281,7 +289,7 @@ class TestApp:
         at.sidebar.button[0].click()
         at.run()
 
-        expected = "Uh Oh, the data could not be fitted. Try changing the parameter guess or fixed values."
+        expected = "The data could not be fitted. Try changing the parameter guess or fixed values."
         assert at.error[0].value == expected
 
     @patch("streamlit.sidebar.file_uploader")
@@ -386,7 +394,7 @@ class TestApp:
         at.sidebar.text_input[4].set_value("1")
         at.run()
 
-        expected = 'You have changed some of the input settings. Press "Run" to apply the changes'
+        expected = "You have changed some of the input settings. Press 'Run' to apply these changes."
         assert at.warning[0].value == expected
 
     @patch("streamlit.sidebar.file_uploader")
@@ -406,7 +414,7 @@ class TestApp:
             text_input.input(str(N0))
         at.run()
 
-        # Click on the button and assert the fit results
+        # Click on the run button
         at.sidebar.button[0].click()
         at.run()
 
@@ -459,7 +467,7 @@ class TestApp:
         at.sidebar.button[0].click()
         at.run()
 
-        assert at.markdown[1].value == "#### Fitting results"
+        assert at.markdown[1].value == "Displaying results of fit #1"
         at.sidebar.text_input[-1].set_value("200")
         at.run()
 
@@ -472,7 +480,6 @@ class TestApp:
             [0.2007576800148292, 0.9503126618979119, 0.608044067096708],
             [0.2007575570692477, 0.9503123227196708, 0.6080440988083968],
         ]
-
         self._test_grid_fitting(BT_TRPL_DATA, "TRPL", "BTA", expected)
 
     def test_bt_trmc_grid(self) -> None:

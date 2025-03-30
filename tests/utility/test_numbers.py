@@ -1,7 +1,7 @@
 from app.utility.numbers import *
 
 
-class TestGetPowerText:
+class TestGetPowerHtml:
 
     def test_zero_value(self) -> None:
         """Test with zero value."""
@@ -70,6 +70,10 @@ class TestGetPowerText:
         """Test with very large numbers."""
         result = get_power_html(1.23e100, 2)
         assert result == "1.23 &#10005; 10<sup>100</sup>"
+
+    def test_base0(self) -> None:
+
+        assert get_power_html(1.0, None) == ""
 
 
 class TestToScientific:

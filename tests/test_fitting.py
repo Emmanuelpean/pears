@@ -140,10 +140,17 @@ class TestFit:
 
         expected = [
             {"a": 100000000.0, "x0": 0.0},
-            {"a": np.float64(100000000.0), "x0": 0.0},
-            {"a": np.float64(100000000.0), "x0": 0.0},
+            {"a": 100000000.0, "x0": 0.0},
+            {"a": 100000000.0, "x0": 0.0},
         ]
         assert are_close(gaussian_fit.list_to_dicts(gaussian_fit.p0_list), expected)
+
+    def test_gaussian_list_to_dicts_no_fixed(self, gaussian_data) -> None:
+
+        expected = [{"a": 100000000.0, "x0": 0.0}, {"a": 100000000.0, "x0": 0.0}, {"a": 100000000.0, "x0": 0.0}]
+        xs_data, ys_data, function, p0, detached_parameters, fixed_parameters = gaussian_data
+        fit = Fit(xs_data, ys_data, function, p0, [], fixed_parameters)
+        assert are_close(fit.list_to_dicts(fit.p0_list), expected)
 
     def test_gaussian_error_function(self, gaussian_fit) -> None:
 

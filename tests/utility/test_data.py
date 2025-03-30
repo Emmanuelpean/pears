@@ -1,5 +1,5 @@
 import pytest
-
+from unittest.mock import mock_open, patch
 from app.utility.data import *
 
 
@@ -248,48 +248,236 @@ class TestLoadData:
             assert np.array_equal(y_array, expected_y_array)
 
 
-class TestAreListsIdentical:
+class TestComparisonFunctions:
+
+    def test_identical_simple_values(self) -> None:
+        """Test identical simple values."""
+        assert are_identical(5, 5)
+        assert are_identical("test", "test")
+        assert are_identical(None, None)
+        assert not are_identical(5, 6)
+        assert not are_identical("test", "different")
+
     def test_identical_lists(self) -> None:
+        """Test identical lists."""
         assert are_identical([1, 2, 3], [1, 2, 3])
-
-    def test_different_lists(self) -> None:
+        assert are_identical([], [])
+        assert are_identical([1, [2, 3]], [1, [2, 3]])
         assert not are_identical([1, 2, 3], [1, 2, 4])
+        assert not are_identical([1, 2, 3], [1, 2])
+        assert not are_identical([1, 2], [1, 2, 3])
 
-    def test_nested_lists(self) -> None:
-        assert are_identical([1, [2, 3], 4], [1, [2, 3], 4])
-        assert not are_identical([1, [2, 3], 4], [1, [2, 4], 4])
-
-    def test_numpy_arrays(self) -> None:
-        assert are_identical(np.array([1.0, 2.0]), np.array([1.0, 2.0]))
-        assert not are_identical(np.array([1.0, 2.0]), np.array([1.0, 3.0]))
-
-    def test_allclose_with_atol(self) -> None:
-        arr1 = np.array([1.0, 2.0, 3.0])
-        arr2 = np.array([1.0, 2.00000001, 3.0])
-        assert are_identical(arr1, arr2, rtol=1e-7)
+    def test_identical_tuples(self) -> None:
+        """Test identical tuples."""
+        assert are_identical((1, 2, 3), (1, 2, 3))
+        assert are_identical((), ())
+        assert are_identical((1, (2, 3)), (1, (2, 3)))
+        assert not are_identical((1, 2, 3), (1, 2, 4))
 
     def test_identical_dicts(self) -> None:
-        dict1 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
-        dict2 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
-        assert are_identical(dict1, dict2)
+        """Test identical dictionaries."""
+        assert are_identical({"a": 1, "b": 2}, {"a": 1, "b": 2})
+        assert are_identical({}, {})
+        assert are_identical({"a": 1, "b": {"c": 3}}, {"a": 1, "b": {"c": 3}})
+        assert not are_identical({"a": 1, "b": 2}, {"a": 1, "b": 3})
+        assert not are_identical({"a": 1, "b": 2}, {"a": 1, "c": 2})
+        assert not are_identical({"a": 1}, {"a": 1, "b": 2})
 
-    def test_different_dicts(self) -> None:
-        dict1 = {"a": 1, "b": [2, 3], "c": np.array([1.0, 2.0])}
-        dict2 = {"a": 1, "b": [2, 4], "c": np.array([1.0, 2.0])}
-        assert not are_identical(dict1, dict2)
+    def test_identical_nested_structures(self) -> None:
+        """Test identical nested structures."""
+        nested1 = {"a": [1, 2, {"b": (3, 4)}]}
+        nested2 = {"a": [1, 2, {"b": (3, 4)}]}
+        different = {"a": [1, 2, {"b": (3, 5)}]}
 
-    def test_dicts_with_allclose(self) -> None:
-        dict1 = {"a": np.array([1.0, 2.0]), "b": np.array([3.0, 4.0])}
-        dict2 = {"a": np.array([1.0, 2.00000001]), "b": np.array([3.0, 4.0])}
-        assert are_identical(dict1, dict2, rtol=1e-7)
+        assert are_identical(nested1, nested2)
+        assert not are_identical(nested1, different)
 
-    def test_list_of_dicts(self) -> None:
-        list1 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 4.0])}]
-        list2 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 4.0])}]
-        assert are_identical(list1, list2)
+    def test_identical_numpy_arrays(self) -> None:
+        """Test identical numpy arrays."""
+        arr1 = np.array([1, 2, 3])
+        arr2 = np.array([1, 2, 3])
+        arr3 = np.array([1, 2, 4])
 
-        list3 = [{"a": 1, "b": np.array([1.0, 2.0])}, {"c": 3, "d": np.array([3.0, 5.0])}]
-        assert not are_identical(list1, list3)
+        assert are_identical(arr1, arr2)
+        assert not are_identical(arr1, arr3)
 
-    def test_different_keys_dicts(self) -> None:
-        assert not are_identical({"a": 1}, {"b": 2})
+    def test_identical_with_rtol(self) -> None:
+        """Test identical with relative tolerance for floating point values."""
+        assert are_identical(1.0, 1.001, rtol=1e-2)
+        assert not are_identical(1.0, 1.001, rtol=1e-4)
+
+        arr1 = np.array([1.0, 2.0, 3.0])
+        arr2 = np.array([1.001, 2.002, 3.003])
+
+        assert are_identical(arr1, arr2, rtol=1e-2)
+        assert not are_identical(arr1, arr2, rtol=1e-4)
+
+    def test_identical_mixed_types(self) -> None:
+        """Test identical with mixed types - should use strict equality."""
+        assert are_identical(1, 1.0)  # Different types
+        assert are_identical(True, 1)  # Different types
+
+    def test_close_simple_values(self) -> None:
+        """Test are_close with simple values."""
+        assert are_close(1.0, 1.0009)  # Default rtol=1e-3
+        assert are_close(1.0, 1.002, rtol=1e-2)
+        assert not are_close(1.0, 1.01)  # Default rtol too small
+
+    def test_close_numpy_arrays(self) -> None:
+        """Test are_close with numpy arrays."""
+        arr1 = np.array([1.0, 2.0, 3.0])
+        arr2 = np.array([1.0009, 2.001, 3.0008])
+        arr3 = np.array([1.01, 2.01, 3.01])
+
+        assert are_close(arr1, arr2)  # Default rtol=1e-3 is enough
+        assert not are_close(arr1, arr3)  # Default rtol too small
+        assert are_close(arr1, arr3, rtol=1e-1)  # Larger rtol works
+
+    def test_close_nested_structures(self) -> None:
+        """Test are_close with nested structures."""
+        nested1 = {"a": [1.0, 2.0, {"b": np.array([3.0, 4.0])}]}
+        nested2 = {"a": [1.0009, 2.001, {"b": np.array([3.0008, 4.0009])}]}
+        nested3 = {"a": [1.01, 2.01, {"b": np.array([3.01, 4.01])}]}
+
+        assert are_close(nested1, nested2)  # Default rtol=1e-3 is enough
+        assert not are_close(nested1, nested3)  # Default rtol too small
+        assert are_close(nested1, nested3, rtol=1e-1)  # Larger rtol works
+
+    def test_close_different_structures(self) -> None:
+        """Test are_close with different structures - should return False."""
+        assert not are_close([1.0, 2.0], [1.0, 2.0, 3.0])
+        assert not are_close({"a": 1.0}, {"a": 1.0, "b": 2.0})
+        assert not are_close({"a": 1.0, "b": 2.0}, {"a": 1.0, "c": 2.0})
+
+    def test_edge_cases(self) -> None:
+        """Test edge cases."""
+        # Empty structures are identical
+        assert are_close([], [])
+        assert are_close({}, {})
+
+        # NaN values
+        nan_array1 = np.array([1.0, np.nan, 3.0])
+        nan_array2 = np.array([1.0, np.nan, 3.0])
+        assert not are_close(nan_array1, nan_array2)  # np.allclose returns False for NaN
+
+        # Infinity values
+        inf_array1 = np.array([1.0, np.inf, 3.0])
+        inf_array2 = np.array([1.0, np.inf, 3.0])
+        assert are_close(inf_array1, inf_array2)
+
+        # Mixed infinity and regular values
+        mixed_inf1 = np.array([1.0, np.inf, 3.0])
+        mixed_inf2 = np.array([1.0001, np.inf, 3.0001])
+        assert are_close(mixed_inf1, mixed_inf2)
+
+
+class TestRenderImage:
+
+    def setup_method(self) -> None:
+        """Set up test environment before each test method."""
+        # Sample SVG content for testing
+        self.sample_svg_content = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+        self.encoded_svg = base64.b64encode(self.sample_svg_content).decode()
+
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_default_params(self, mock_file) -> None:
+        """Test render_image with default parameters."""
+        # Configure the mock to return our sample SVG content
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        # Call the function with just the file path
+        result = render_image("test.svg")
+
+        # Verify the file was opened correctly
+        mock_file.assert_called_once_with("test.svg", "rb")
+
+        # Check the returned HTML string
+        expected_html = f'<center><img src="data:image/svg+xml;base64,{self.encoded_svg}" id="responsive-image" width="100%"/></center>'
+        assert result == expected_html
+
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_custom_width(self, mock_file) -> None:
+        """Test render_image with custom width."""
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        # Call with custom width
+        result = render_image("test.svg", width=50)
+
+        # Check the width in the resulting HTML
+        expected_html = f'<center><img src="data:image/svg+xml;base64,{self.encoded_svg}" id="responsive-image" width="50%"/></center>'
+        assert result == expected_html
+
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_custom_itype(self, mock_file) -> None:
+        """Test render_image with custom image type."""
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        # Call with custom image type
+        result = render_image("test.svg", itype="png")
+
+        # Check the image type in the resulting HTML
+        expected_html = f'<center><img src="data:image/png+xml;base64,{self.encoded_svg}" id="responsive-image" width="100%"/></center>'
+        assert result == expected_html
+
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_all_custom_params(self, mock_file) -> None:
+        """Test render_image with all custom parameters."""
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        # Call with all custom parameters
+        result = render_image("test.svg", width=75, itype="jpeg")
+
+        # Check all parameters in the resulting HTML
+        expected_html = f'<center><img src="data:image/jpeg+xml;base64,{self.encoded_svg}" id="responsive-image" width="75%"/></center>'
+        assert result == expected_html
+
+    def test_render_image_file_not_found(self) -> None:
+        """Test render_image with non-existent file."""
+        # Test with a file that doesn't exist
+        with pytest.raises(FileNotFoundError):
+            render_image("nonexistent.svg")
+
+    @patch("builtins.open")
+    def test_render_image_read_error(self, mock_file) -> None:
+        """Test render_image with file read error."""
+        # Simulate a read error
+        mock_file.return_value.__enter__.return_value.read.side_effect = IOError("Read error")
+
+        with pytest.raises(IOError):
+            render_image("error.svg")
+
+    @pytest.mark.parametrize(
+        "width,expected_width",
+        [
+            (0, "0%"),
+            (100, "100%"),
+            (200, "200%"),
+        ],
+    )
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_various_widths(self, mock_file, width, expected_width) -> None:
+        """Test render_image with various width values."""
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        result = render_image("test.svg", width=width)
+
+        assert f'width="{expected_width}"' in result
+
+    @pytest.mark.parametrize("itype", ["svg", "png", "jpeg", "gif", "webp"])
+    @patch("builtins.open", new_callable=mock_open)
+    def test_render_image_various_types(self, mock_file, itype) -> None:
+        """Test render_image with various image types."""
+        mock_file.return_value.read.return_value = self.sample_svg_content
+
+        result = render_image("test.svg", itype=itype)
+
+        assert f"data:image/{itype}+xml;base64" in result
+
+    def test_streamlit_cache_decorator(self) -> None:
+        """Test that the st.cache_resource decorator is applied to the function."""
+        # Verify that the function is decorated with st.cache_resource
+        # This is a bit tricky to test directly, but we can check if the function has
+        # the attributes that Streamlit adds to cached functions
+
+        # This assumes the original function is correctly decorated with @st.cache_resource
+        assert hasattr(render_image, "__wrapped__")

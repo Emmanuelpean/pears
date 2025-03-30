@@ -50,7 +50,7 @@ def render_image(
     with open(svg_file, "rb") as ofile:
         svg = base64.b64encode(ofile.read()).decode()
         return (
-            f'<center><img src="data:image/{itype}+xml;base64,{svg}" id="responsive-image" width="{width}%%"/></center>'
+            f'<center><img src="data:image/{itype}+xml;base64,{svg}" id="responsive-image" width="{width}%"/></center>'
         )
 
 

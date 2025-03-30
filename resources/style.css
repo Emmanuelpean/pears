@@ -6,3 +6,12 @@
 .custom-line-spacing {
   line-height: 2.5; /* Adjust this value as needed */
 }
+
+/* Remove padding on top of the page */
+.block-container {
+    padding-top: 3rem;
+    padding-bottom: 2rem;
+}
+
+/* Increase the expander test size */
+div[data-testid="stExpander"] details summary p{font-size: 16px;}

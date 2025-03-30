@@ -125,7 +125,7 @@ def plot_carrier_concentrations(
     :param N0s: list of initial carrier concentration
     :param titles: list of titles of each subplot
     :param xlabel: x-axis label
-    :param model: module used"""
+    :param model: model used"""
 
     figure, positions = subplots(len(N0s), 2, subplot_titles=titles)
     font = dict(size=16, color="black")
@@ -152,7 +152,6 @@ def plot_carrier_concentrations(
             tickfont=font,
             showgrid=True,
             gridcolor="lightgray",
-            range=[min(x_data) - 0.01 * (max(x_data) - min(x_data)), max(x_data) + 0.01 * (max(x_data) - min(x_data))],
         )
         figure.update_yaxes(
             title_text="Concentration (N<sub>0</sub>)",
