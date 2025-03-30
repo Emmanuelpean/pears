@@ -179,3 +179,12 @@ def load_data(
     ys_data = [y_data[np.invert(np.isnan(y_data))] for y_data in ys_data]
 
     return xs_data, ys_data
+
+
+@st.cache_resource
+def read_txt_file(path: str) -> str:
+    """Read the content of a text file and store it as a resource.
+    :param path: file path"""
+
+    with open(path) as ofile:
+        return ofile.read()

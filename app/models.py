@@ -246,6 +246,7 @@ class Model(object):
             x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
 
             # Calculate the fit quantity after 1 pulse and until stabilisation
+            param = merge_dicts({"I": 0.0, "y_0": 0.0}, param)
             pulse1 = self.calculate_fit_quantity(x, **param)
             pulse2 = self.calculate_fit_quantity(x, p=10000, **param)
 

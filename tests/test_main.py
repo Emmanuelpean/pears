@@ -14,7 +14,7 @@ from app.utility.data import are_close
 class TestApp:
 
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    main_path = "app/main.py"
+    main_path = "../app/main.py"
 
     def test_default(self) -> None:
 
@@ -22,6 +22,7 @@ class TestApp:
         at = AppTest(self.main_path, default_timeout=100)
         at.run()
         assert at.info[0].value == "Load a data file"
+        assert len(at.error) == 0
 
     @staticmethod
     def create_mock_file(mock_file_uploader: MagicMock, data: np.ndarray) -> None:
@@ -92,6 +93,7 @@ class TestApp:
         at.run()
 
         assert are_close(at.session_state["carrier_accumulation"], expected_output["ca"])
+        assert len(at.error) == 0
 
     def test_bt_trpl(self) -> None:
         expected = {
@@ -243,6 +245,7 @@ class TestApp:
         at.run()
 
         assert at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] == 3
+        assert len(at.error) == 0
 
         # Change the guess value to an incorrect value
         at.sidebar.text_input[3].set_value("")  # reset the fixed value
@@ -253,6 +256,7 @@ class TestApp:
         at.run()
 
         assert at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] == 3
+        assert len(at.error) == 0
 
         # Change the fixed value range to an incorrect value
         at.sidebar.selectbox[0].set_value("Grid Fitting")
@@ -263,6 +267,7 @@ class TestApp:
         at.run()
 
         assert at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] == [2.0, 5.0, 6.0]
+        assert len(at.error) == 0
 
     @patch("streamlit.sidebar.file_uploader")
     def test_bad_fitting(self, mock_file_uploader: MagicMock) -> None:
@@ -291,6 +296,7 @@ class TestApp:
 
         expected = "The data could not be fitted. Try changing the parameter guess or fixed values."
         assert at.error[0].value == expected
+        assert len(at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_uneven_column_file(self, mock_file_uploader: MagicMock):
@@ -310,6 +316,7 @@ class TestApp:
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
         assert at.error[0].value == expected
+        assert len(at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_uneven_column_file2(self, mock_file_uploader: MagicMock):
@@ -328,6 +335,7 @@ class TestApp:
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
         assert at.error[0].value == expected
+        assert len(at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_column_file(self, mock_file_uploader: MagicMock):
@@ -349,6 +357,7 @@ class TestApp:
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch: x data and y data must have the same number of columns."
         assert at.error[0].value == expected
+        assert len(at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_incorrect_delimiter(self, mock_file_uploader: MagicMock):
@@ -366,6 +375,7 @@ class TestApp:
 
         expected = "Uh-oh! The data could not be loaded. Error: Unknown error, Check that the correct delimiter has been selected."
         assert at.error[0].value == expected
+        assert len(at.error) == 1
 
     # ----------------------------------------------------- OTHERS -----------------------------------------------------
 
@@ -424,6 +434,7 @@ class TestApp:
         # Rerun
         at.run()
         assert at.session_state.carrier_accumulation is not None
+        assert len(at.error) == 0
 
     # ------------------------------------------------ TEST GRID FITTING -----------------------------------------------
 
@@ -467,11 +478,12 @@ class TestApp:
         at.sidebar.button[0].click()
         at.run()
 
-        assert at.markdown[1].value == "Displaying results of fit #1"
+        assert at.markdown[1].value == "### Displaying results of fit #1"
         at.sidebar.text_input[-1].set_value("200")
         at.run()
 
         assert are_close(at.session_state["carrier_accumulation"], expected_output)
+        assert len(at.error) == 0
 
     def test_bt_trpl_grid(self) -> None:
         expected = [

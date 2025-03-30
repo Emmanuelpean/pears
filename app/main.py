@@ -1,9 +1,13 @@
-"""main script
-Important notes:
-- Changing the app mode or the data resets all the results
-- Changing the period change data associated with the fit
-- Changing any other value does not re-run the fit but displays a message about it
-- Changing the data loaded resets everything"""  # TODO complete that
+"""Graphical user interface of Pears
+Fit results and carrier accumulation are reset if
+- The app mode is changed.
+- New data are uploaded.
+- The file delimiter is changed.
+- The quantity is changed.
+- The pre-processing is toggled.
+Carrier accumulation is reset if
+- The period is changed.
+Changing any other value does not re-run the fit but displays a message about it"""
 
 import copy
 
@@ -11,14 +15,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-import models
-import plot
 import resources
-from utility.data import load_data, matrix_to_string, process_data, render_image
+from models import models, Model
+from plot import plot_decays, plot_carrier_concentrations, parallel_plot
+from utility.data import load_data, matrix_to_string, process_data, render_image, read_txt_file
 from utility.numbers import get_power_labels, to_scientific
 
 __version__ = "0.4.0"
-__date__ = "9th May 2022"
+__date__ = "March 2025"
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -33,17 +37,17 @@ if "results" not in st.session_state:
 if "carrier_accumulation" not in st.session_state:
     st.session_state.carrier_accumulation = None  # carrier accumulation
 if "models" not in st.session_state:
-    st.session_state.models = copy.deepcopy(models.models)
+    st.session_state.models = copy.deepcopy(models)
 
 
 def reset_carrier_accumulation() -> None:
+    """Reset the stored carrier accumulation"""
     print("Resetting carrier accumulation")
     st.session_state.carrier_accumulation = None
 
 
 def reset_results() -> None:
-    """Reset the stored values"""
-
+    """Reset the stored results and carrier accumulation"""
     print("Resetting results")
     st.session_state.results = []
     reset_carrier_accumulation()
@@ -53,7 +57,6 @@ def reset_results() -> None:
 @st.cache_resource
 def set_style() -> None:
     """Set the default style"""
-
     with open(resources.CSS_STYLE_PATH) as ofile:
         st.markdown(f"<style>{ofile.read()}</style>", unsafe_allow_html=True)
 
@@ -91,6 +94,7 @@ data_format = st.sidebar.radio(
     help=data_format_help,
     key="data_format_",
     horizontal=True,
+    on_change=reset_results,
 )
 
 # Data delimiter
@@ -112,6 +116,7 @@ quantity_input = st.sidebar.radio(
     help="Quantity associated with the data",
     key="quantity_input_",
     horizontal=True,
+    on_change=reset_results,
 )
 
 # Processing data
@@ -162,7 +167,9 @@ else:
 if xs_data[0] is None:
     logo_placeholder.markdown(render_image(resources.LOGO_TEXT_PATH, 50), unsafe_allow_html=True)  # main logo
 
+
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
+
 
 fluence_message = st.empty()
 N0s = None
@@ -200,7 +207,7 @@ if N0s is not None:
         key="model_name_",
         format_func=lambda v: {"BTD": "Bimolecular-Trapping-Detrapping", "BTA": "Bimolecular-Trapping-Auger"}[v],
     )
-    model: models.Model | None = st.session_state.models[model_name][quantity_input]
+    model: Model | None = st.session_state.models[model_name][quantity_input]
 
 
 # ------------------------------------------------ FIXED & GUESS VALUES ------------------------------------------------
@@ -388,23 +395,23 @@ if st.session_state.results or run_button:
                 popts.append(popt)
 
             # Display the parallel plot
-            xp = plot.parallel_plot(popts, fit_output[0]["hidden_keys"])
+            xp = parallel_plot(popts, fit_output[0]["hidden_keys"])
             selected = xp.to_streamlit("hip", "selected_uids").display()
             fit_displayed = fit_output[int(selected[0])]
-            message = f"Displaying results of fit #{int(selected[0]) + 1}"
+            message = f"### Displaying results of fit #{int(selected[0]) + 1}"
 
         # --------------------------------------------------------------------------------------------------------------
         # ------------------------------------------------ DISPLAY FIT  ------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------
 
+        st.markdown(message)
         col1, col2 = st.columns(2)
 
         # -------------------------------------------- FITTING PLOT & EXPORT -------------------------------------------
 
-        col1.markdown(message)
-
+        col1.markdown("#### Data Fit")
         # Plot
-        figure = plot.plot_decays(
+        figure = plot_decays(
             fit_displayed["xs_data"],
             fit_displayed["ys_data"],
             quantity_input,
@@ -440,6 +447,8 @@ if st.session_state.results or run_button:
 
         if period:
             col1.markdown("""#### Carrier accumulation""")
+            if fit_mode == resources.ANALYSIS_MODE:
+                carrier_accumulation = carrier_accumulation[int(selected[0])]
             nca_dict = dict(zip(fit_displayed["N0s_labels"], carrier_accumulation))
             nca_df = pd.DataFrame(nca_dict, index=["Carrier accumulation (%)"])
             col1.markdown(nca_df.to_html(escape=False) + "<br>", unsafe_allow_html=True)
@@ -462,7 +471,7 @@ if st.session_state.results or run_button:
             fit_displayed["popts"],
             period,
         )
-        conc_fig = plot.plot_carrier_concentrations(
+        conc_fig = plot_carrier_concentrations(
             concentrations[0],
             concentrations[2],
             fit_displayed["N0s"],
@@ -484,7 +493,7 @@ elif xs_data[0] is not None:
             labels = get_power_labels(N0s)
         else:
             labels = None
-        figure = plot.plot_decays(
+        figure = plot_decays(
             xs_data,
             ys_data,
             quantity_input,
@@ -629,7 +638,7 @@ with st.expander("Model & Computational Details"):
     )
     st.latex(
         r"{CA}_{TRPL}=\max\left({\frac{I_{TRPL}^{p=1}(t)}{I_{TRPL}^{p=1}(0)}-\frac{I_{TRPL}^{p=s}(t)}{I_{TRPL}^{p=s}(0)}}\right)"
-    )  # TODO should not account for y_0 and I
+    )
     st.latex(r"{CA}_{TRMC}=\max\left(I_{TRMC}^{p=1}(t)-I_{TRMC}^{p=s}(t)\right)")
     st.markdown(
         """The stabilised pulse is defined as when the electron and hole concentrations vary by less than 
@@ -712,43 +721,9 @@ with st.expander("Getting started"):
 # ------------------------------------------------------ CHANGELOG -----------------------------------------------------
 
 with st.expander("Changelog"):
-    changelog = """
-    #### Version 0.4.0.0 - March 2025
-    * Pears can now fit time-resolved microwave photoconductivity (TRMC) data.
-    * A new "Quantity" input has been added to the sidebar to select the type of data to fit.
-    * Changed the colour theme to match the *Pears* logo.
-    * Changed the photoexcited carrier concentration input to match the number of decays in the uploaded file.
-    #### Version 0.3.1.2 - May 2022
-    * The Auger rate constant is now fixed to 0 by default.
-    * Fixed a bug during which data could not be successfully loaded.
-    #### Version 0.3.1.1 - April 2022
-    * Fixed some bugs regarding file upload that were introduced in the previous update.
-    #### Version 0.3.1 - March 2022
-    * Added new "Pre-process" option to shift the data to zero and normalise them.
-    * Files with a header can now be uploaded.
-    #### Version 0.3.0 - November 2021
-    * Added the I0 intensity parameter to the fitting procedure.
-    * Added a new file input format (X1/Y1/X2/Y2).
-    * Added the calculation of the process contributions.
-    * Added the calculation of the carrier accumulation effect on the TRPL.
-    * Added help bubbles.
-    * Fixed a pesky bug that prevented from changing the parameter fixed values.
-    * Changed the model descriptions.
-    * Added new parallel plot visualisation for grid fitting analysis.
-    * Fits and Grid Fit analysis now stay on screen until the run button is pressed again (unless the mode or the data 
-    are changed).
-    * Added disclaimer.
-    * Added website icon.
-    * Added video tutorial.
-    * Now accept a wider range of data."""
-    st.markdown(changelog)
+    st.markdown(read_txt_file("../CHANGELOG.md"))
 
 # ----------------------------------------------------- DISCLAIMER -----------------------------------------------------
 
-with st.expander("Disclaimer"):
-    disclaimer = """THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,  INCLUDING BUT 
-    NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. 
-    IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER 
-    LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE 
-    USE OR OTHER DEALINGS IN THE SOFTWARE."""
-    st.markdown(disclaimer)
+with st.expander("License & Disclaimer"):
+    st.markdown(read_txt_file("../LICENSE.txt"))
