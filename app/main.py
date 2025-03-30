@@ -26,7 +26,7 @@ from utility.numbers import get_power_labels, to_scientific
 __version__ = "0.4.0"
 __date__ = "March 2025"
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.abspath(__file__))
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
