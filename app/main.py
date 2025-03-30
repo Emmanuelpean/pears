@@ -26,7 +26,7 @@ from utility.numbers import get_power_labels, to_scientific
 __version__ = "0.4.0"
 __date__ = "March 2025"
 
-sys.path.append(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
@@ -731,9 +731,9 @@ with st.expander("Getting started"):
 # ------------------------------------------------------ CHANGELOG -----------------------------------------------------
 
 with st.expander("Changelog"):
-    st.markdown(read_txt_file("../CHANGELOG.md"))
+    st.markdown(read_txt_file("CHANGELOG.md"))
 
 # ----------------------------------------------------- DISCLAIMER -----------------------------------------------------
 
 with st.expander("License & Disclaimer"):
-    st.markdown(read_txt_file("../LICENSE.txt"))
+    st.markdown(read_txt_file("LICENSE.txt"))
