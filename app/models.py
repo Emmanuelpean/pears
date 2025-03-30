@@ -232,12 +232,12 @@ class Model(object):
         self,
         params: list[dict[str, float]],
         period: float,
-    ) -> list[float]:
+    ) -> dict[str:list]:
         """Calculate the carrier accumulation effect on the TRPL.
         :param params: list of arguments passed to calculate_fit_quantity.
         :param period: excitation repetition period in ns."""
 
-        nca = []
+        carrier_accumulation = {"CA": [], "Decays": []}
 
         # For each decay fitted
         for param in params:
@@ -246,14 +246,15 @@ class Model(object):
             x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
 
             # Calculate the fit quantity after 1 pulse and until stabilisation
-            param = merge_dicts({"I": 0.0, "y_0": 0.0}, param)
+            param = merge_dicts({"I": 1.0, "y_0": 0.0}, param)
             pulse1 = self.calculate_fit_quantity(x, **param)
             pulse2 = self.calculate_fit_quantity(x, p=10000, **param)
 
             # Calculate the normalised carrier accumulation in %
-            nca.append(np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100)
+            carrier_accumulation["CA"].append(np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100)
+            carrier_accumulation["Decays"] = [[x, x], [pulse1, pulse2]]
 
-        return nca
+        return carrier_accumulation
 
     def get_carrier_concentrations(
         self,
@@ -405,7 +406,7 @@ class Model(object):
 
             # Update the progressbar if provided
             if progressbar is not None:
-                progressbar.progress(i / float(len(all_p0s) - 1))
+                progressbar.progress(i / float(len(all_p0s) - 1))  # pragma: no cover
 
             # Fit the data
             try:

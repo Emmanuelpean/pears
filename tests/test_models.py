@@ -238,12 +238,12 @@ class TestBTModelTRPL:
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BT_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTModelTRPL().get_carrier_accumulation(popts, 100)
+        output = BTModelTRPL().get_carrier_accumulation(popts, 100)["CA"]
         expected = [np.float64(2.1474605461112906), np.float64(0.3260927825203319)]
         assert are_close(output, expected)
 
         # 50 ns period
-        output = BTModelTRPL().get_carrier_accumulation(popts, 50)
+        output = BTModelTRPL().get_carrier_accumulation(popts, 50)["CA"]
         expected = [np.float64(4.931657664085842), np.float64(0.8414419278757801)]
         assert are_close(output, expected)
 
@@ -475,12 +475,12 @@ class TestBTModelTRMC:
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, "mu": 10, **BT_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTModelTRMC().get_carrier_accumulation(popts, 100)
+        output = BTModelTRMC().get_carrier_accumulation(popts, 100)["CA"]
         expected = [np.float64(1.8119795431245034), np.float64(0.2751318097141131)]
         assert are_close(output, expected)
 
         # 50 ns period
-        output = BTModelTRMC().get_carrier_accumulation(popts, 50)
+        output = BTModelTRMC().get_carrier_accumulation(popts, 50)["CA"]
         expected = [np.float64(4.161872397435568), np.float64(0.7099465316118103)]
         assert are_close(output, expected)
 
@@ -786,12 +786,12 @@ class TestBTDModelTRPL:
         popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BTD_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTDModelTRPL().get_carrier_accumulation(popts, 100)
+        output = BTDModelTRPL().get_carrier_accumulation(popts, 100)["CA"]
         expected = [np.float64(4.624820971652416), np.float64(0.5713873355827237)]
         assert are_close(output, expected)
 
         # 50 ns period
-        output = BTDModelTRPL().get_carrier_accumulation(popts, 50)
+        output = BTDModelTRPL().get_carrier_accumulation(popts, 50)["CA"]
         expected = [np.float64(7.852802160625521), np.float64(1.1155396319428357)]
         assert are_close(output, expected)
 
@@ -1029,12 +1029,12 @@ class TestBTDModelTRMC:
         popts = [{"N_0": n, **BTD_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTDModelTRMC().get_carrier_accumulation(popts, 100)
+        output = BTDModelTRMC().get_carrier_accumulation(popts, 100)["CA"]
         expected = [np.float64(3.912967640970455), np.float64(0.48314189311882694)]
         assert are_close(output, expected)
 
         # 50 ns period
-        output = BTDModelTRMC().get_carrier_accumulation(popts, 50)
+        output = BTDModelTRMC().get_carrier_accumulation(popts, 50)["CA"]
         expected = [np.float64(6.63910507746735), np.float64(0.9422743536986633)]
         assert are_close(output, expected)
 

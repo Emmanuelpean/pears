@@ -14,7 +14,7 @@ from app.utility.data import are_close
 class TestApp:
 
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    main_path = "../app/main.py"
+    main_path = "app/main.py"
 
     def test_default(self) -> None:
 
@@ -92,7 +92,7 @@ class TestApp:
         at.sidebar.text_input[-1].set_value("200")
         at.run()
 
-        assert are_close(at.session_state["carrier_accumulation"], expected_output["ca"])
+        assert are_close(at.session_state["carrier_accumulation"]["CA"], expected_output["ca"])
         assert len(at.error) == 0
 
     def test_bt_trpl(self) -> None:
@@ -482,7 +482,8 @@ class TestApp:
         at.sidebar.text_input[-1].set_value("200")
         at.run()
 
-        assert are_close(at.session_state["carrier_accumulation"], expected_output)
+        ca = [f["CA"] for f in at.session_state["carrier_accumulation"]]
+        assert are_close(ca, expected_output)
         assert len(at.error) == 0
 
     def test_bt_trpl_grid(self) -> None:

@@ -363,7 +363,7 @@ if st.session_state.results or run_button:
 
     # ---------------------------------------------- CARRIER ACCUMULATION ----------------------------------------------
 
-    carrier_accumulation = None
+    carrier_accumulation: dict | list[dict] | None = None
     if period:
         if st.session_state.carrier_accumulation is None:  # if carrier accumulation has not been calculated
             print("Calculating CA")
@@ -391,7 +391,7 @@ if st.session_state.results or run_button:
             for i, fit_popt in enumerate(fit_output):
                 popt = fit_popt["all_values"].copy()
                 if carrier_accumulation is not None:
-                    popt["Max. CA (%)"] = np.max(carrier_accumulation[i])
+                    popt["Max. CA (%)"] = np.max(carrier_accumulation[i]["CA"])
                 popts.append(popt)
 
             # Display the parallel plot
@@ -446,15 +446,22 @@ if st.session_state.results or run_button:
         # -------------------------------------------- CARRIER ACCUMULATION  -------------------------------------------
 
         if period:
-            col1.markdown("""#### Carrier accumulation""")
+            st.markdown("""#### Carrier accumulation""")
             if fit_mode == resources.ANALYSIS_MODE:
                 carrier_accumulation = carrier_accumulation[int(selected[0])]
-            nca_dict = dict(zip(fit_displayed["N0s_labels"], carrier_accumulation))
+            nca_dict = dict(zip(fit_displayed["N0s_labels"], carrier_accumulation["CA"]))
             nca_df = pd.DataFrame(nca_dict, index=["Carrier accumulation (%)"])
             col1.markdown(nca_df.to_html(escape=False) + "<br>", unsafe_allow_html=True)
 
+            # figure = plot_decays(
+            #     *carrier_accumulation["Decays"],
+            #     quantity_input,
+            #     labels=["Pulse 1", "Stabilised Pulse"],
+            # )
+            # columns[1].plotly_chart(figure)
+
             # Analysis
-            max_nca = np.max(carrier_accumulation)
+            max_nca = np.max(carrier_accumulation["CA"])
             if max_nca > 5.0:
                 ca_warning = f"""This fit predicts significant carrier accumulation leading to a maximum {max_nca:.1f} % difference 
                                  between the single pulse and multiple pulse {quantity_input} decays. You might need to increase your 
