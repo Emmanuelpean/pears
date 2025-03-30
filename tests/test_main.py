@@ -14,7 +14,7 @@ from app.utility.data import are_close
 class TestApp:
 
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    main_path = "../app/main.py"
+    main_path = "app/main.py"
 
     def test_default(self) -> None:
 
