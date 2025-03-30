@@ -14,7 +14,7 @@ from app.utility.data import are_close
 class TestApp:
 
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    main_path = "app/main.py"
+    main_path = "../app/main.py"
 
     def test_default(self) -> None:
 
@@ -303,7 +303,7 @@ class TestApp:
     def test_uneven_column_file(self, mock_file_uploader: MagicMock):
 
         x = np.linspace(0, 10, 50)
-        y = np.cos(x[:-10])  # Make y2 shorter than x
+        y = np.cos(x[:-10])  # Make y shorter than x
         y_str = [str(_y) for _y in y] + [""] * (len(x) - len(y))
         temp_path = "_temp.csv"
         np.savetxt(temp_path, np.transpose([x, y_str]), fmt="%s", delimiter=",")
