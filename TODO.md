@@ -8,6 +8,8 @@
 ## Refactoring
 - [X] Refactor the tests/test_main.py module.
 
-## Github
+## GitHub
 - [X] Update the GitHub description.
 - [X] Add MIT licence badge.
+- [ ] Add upload to heroku after successful tests.
+- [ ] Add testing results to GitHub.

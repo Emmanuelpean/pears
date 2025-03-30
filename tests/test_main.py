@@ -23,6 +23,7 @@ class TestApp:
         at.run()
         assert at.info[0].value == "Load a data file"
         assert len(at.error) == 0
+        assert at.expander[-1].label == "License & Disclaimer"
 
     @staticmethod
     def create_mock_file(mock_file_uploader: MagicMock, data: np.ndarray) -> None:
