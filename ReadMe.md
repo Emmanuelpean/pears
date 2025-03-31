@@ -26,7 +26,7 @@ trapping, and bimolecular detrapping. Contrary to the BTA model, the BTD model a
 depopulation of the trap states, as well as the presence of doping. However, the increased complexity of this model can 
 lead to over-parameterisation and ambiguous results.
 
-Pears offers two operational modes:
+*Pears* offers two operational modes:
 * The **Fitting** mode is the primary mode for fitting experimental TRPL and TRMC data.
 * The **Grid Fitting** mode allows to run the fitting optimisation across a range of guess parameters, helping to 
 identify whether multiple sets of parameters yield fitting solutions, as discussed in https://doi.org/10.1002/smtd.202400818. 
@@ -34,5 +34,5 @@ If the optimisations do not converge to the same values, the fitting may be inac
 possible solutions.
 
 App created and maintained by Emmanuel V. Pean.  
-Version 0.4.0 (last updated: March 2025).  
-If you use Pears to fit your TRPL or TRMC data, please cite https://doi.org/10.1021/acs.jcim.3c00217.
+Version 2.0.0 (last updated: March 2025).  
+If you use *Pears* to fit your TRPL or TRMC data, please cite https://doi.org/10.1021/acs.jcim.3c00217.

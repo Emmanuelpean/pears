@@ -23,7 +23,7 @@ from plot import plot_decays, plot_carrier_concentrations, parallel_plot
 from utility.data import load_data, matrix_to_string, process_data, render_image, read_txt_file
 from utility.numbers import get_power_labels, to_scientific
 
-__version__ = "0.4.0"
+__version__ = "2.0.0"
 __date__ = "March 2025"
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
