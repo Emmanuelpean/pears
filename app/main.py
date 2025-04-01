@@ -383,7 +383,7 @@ try:
                         ]
                     except AssertionError:  # if carrier accumulation cannot be calculated
                         carrier_accumulation = []
-                    except MessageSizeError:  # pragma: no cover # if too many numbers
+                    except MessageSizeError:  # pragma: no cover # if too many numbers (should not be possible)
                         carrier_accumulation = []
                 else:
                     try:
@@ -621,7 +621,7 @@ except FitFailedException as exception:
     bad_fit_message = "The data could not be fitted. Try changing the parameter guess or fixed values."
     info_message.error(bad_fit_message)
 
-except Exception as exception:
+except Exception as exception:  # pragma: no cover
     st.error(f"An unknown exception has happened {exception}")
 
 
