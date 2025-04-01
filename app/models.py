@@ -24,10 +24,11 @@ import itertools
 import numpy as np
 import scipy.integrate as sci
 import streamlit
+import pandas as pd
 
 from fitting import Fit
 from utility.dict import filter_dicts, list_to_dict, merge_dicts
-from utility.numbers import get_power_html, get_power_labels
+from utility.numbers import get_power_html, get_concentrations_html
 
 # Example parameters for the BT and BTD models
 BT_KWARGS = dict(k_B=50e-20, k_T=10e-3, k_A=1e-40, I=1.0, y_0=0, mu=10.0)
@@ -36,6 +37,10 @@ BTD_KWARGS = dict(k_B=50e-20, k_T=12000e-20, N_T=60e12, p_0=65e12, k_D=80e-20, I
 # Example photoexcited carrier concentrations
 BT_N0s = [1e15, 1e16, 1e17]
 BTD_N0s = [0.51e14, 1.61e14, 4.75e14, 16.1e14, 43.8e14]
+
+N0_HTML_QUANTITY_UNIT = "N<sub>0</sub> (cm<sup>-3</sup>)"
+
+MP_PULSES = 10000  # maximum number of pulses simulated
 
 
 class Model(object):
@@ -48,6 +53,7 @@ class Model(object):
     CBT_LABELS = {"A": "Auger (%)", "B": "Bimolecular (%)", "T": "Trapping (%)", "D": "Detrapping (%)"}
     CONC_LABELS_HTML = {"n_e": "n<sub>e</sub>", "n_t": "n<sub>t</sub>", "n_h": "n<sub>h</sub>", "n": "n"}
     CONC_COLORS = {"n_e": "red", "n_t": "green", "n_h": "blue", "n": "black"}
+    MODEL = ""
 
     # Quantities display
     PARAM_FULLNAME = {
@@ -237,22 +243,32 @@ class Model(object):
         :param params: list of arguments passed to calculate_fit_quantity.
         :param period: excitation repetition period in ns."""
 
-        carrier_accumulation = {"CA": [], "Decays": []}
+        # Create a new log timescale
+        x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
+
+        carrier_accumulation = {"CA": [], "Pulse 1": [], "Pulse S": [], "t": [x] * len(params)}
 
         # For each decay fitted
         for param in params:
 
-            # Create a new log timescale
-            x = np.insert(np.logspace(-4, np.log10(period), 10001), 0, 0)
-
             # Calculate the fit quantity after 1 pulse and until stabilisation
             param = merge_dicts({"I": 1.0, "y_0": 0.0}, param)
             pulse1 = self.calculate_fit_quantity(x, **param)
-            pulse2 = self.calculate_fit_quantity(x, p=10000, **param)
+            pulse2 = self.calculate_fit_quantity(x, p=MP_PULSES, **param)
 
             # Calculate the normalised carrier accumulation in %
             carrier_accumulation["CA"].append(np.max(np.abs(pulse1 / pulse1[0] - pulse2 / pulse2[0])) * 100)
-            carrier_accumulation["Decays"] = [[x, x], [pulse1, pulse2]]
+            carrier_accumulation["Pulse 1"].append(pulse1)
+            carrier_accumulation["Pulse S"].append(pulse2)
+
+        # Generate the carrier accumulation dataframe
+        N0s = [d["N_0"] for d in params]
+        N0_labels = get_power_html(N0s, -1)
+        ca_str = [f"{ca:.1f}" for ca in carrier_accumulation["CA"]]
+        ca_dict = dict(zip(N0_labels, ca_str))
+        ca_df = pd.DataFrame(ca_dict, index=["Carrier accumulation (%)"])
+        ca_df.columns.name = N0_HTML_QUANTITY_UNIT
+        carrier_accumulation["CA_df"] = ca_df
 
         return carrier_accumulation
 
@@ -267,27 +283,24 @@ class Model(object):
         :param params: list of arguments passed to calculate_concentrations.
         :param period: excitation repetition period in ns."""
 
-        # If no period is provided, use the x-axis data provided and set the number of pulses to 1
-        if not period:
-            xaxis_data = xs_data
-            nb_pulses = 1
-            xlabel = "Time (ns)"
+        concentrations = []  # concentration dicts for each power/popts
 
-        # If a period is provided, generate new x-axis data based on this period
+        if period:
+            n = 201
+            x_data = np.linspace(0, float(period), n)
+            xplot_data = []
+            for param in params:
+                concentration = self._calculate_concentrations(x_data, p=MP_PULSES, **param)
+                nb_pulses = len(list(concentration.values())[0])
+                xplot_data.append(np.linspace(0, nb_pulses, n * nb_pulses))
+                concentrations.append({key: np.concatenate(concentration[key]) for key in concentration})
+            return xplot_data, "Pulse", concentrations
+
         else:
-            xs_data = [np.linspace(0, float(period), 1001)] * len(xs_data)
-            nb_pulses = 100
-            xaxis_data = [np.linspace(0, nb_pulses, len(x_data) * nb_pulses) for x_data in xs_data]
-            xlabel = "Pulse"
-
-        concentrations = []
-
-        # For each x-axis data and parameter values, calculate the concentration after a certain number of pulses
-        for x_data, param in zip(xs_data, params):
-            concentration = self._calculate_concentrations(x_data, p=nb_pulses, **param)
-            concentrations.append({key: np.concatenate(concentration[key]) for key in concentration})
-
-        return xaxis_data, xlabel, concentrations
+            for x_data, param in zip(xs_data, params):
+                concentration = self._calculate_concentrations(x_data, **param)
+                concentrations.append({key: np.concatenate(concentration[key]) for key in concentration})
+            return xs_data, "Time (ns)", concentrations
 
     # ----------------------------------------------------- FITTING ----------------------------------------------------
 
@@ -302,7 +315,7 @@ class Model(object):
         :param xs_data: list-like of x data
         :param ys_data: list-like of y data
         :param N0s: list of initial carrier concentrations (cm-3)
-        :param p0: guess values. If None, use the gvalues dict"""
+        :param p0: guess values. If None, use the gvalues dict attribute"""
 
         # Add the initial carrier concentration to the fixed parameters and get the guess values
         fixed_parameters = [merge_dicts(self.fixed_values, dict(N_0=n0)) for n0 in N0s]
@@ -317,27 +330,22 @@ class Model(object):
         fit_ydata = fit.calculate_fits(popts)
         cod = fit.calculate_rss(fit_ydata)
 
-        popts_labels = []
+        # Popt dataframe
+        popt_dict = {}
         for key in self.param_ids:
-
-            # Generate the label for that parameter
-            if key in self.detached_parameters:
-                data = ["%.5f" % (popt[key] / self.factors[key]) for popt in popts]
-                value_string = ", ".join(data)
-            else:
-                value_string = "%.5f" % (popts[0][key] / self.factors[key])
-            label = (
-                f"{self.PARAM_FULLNAME[key]} ({self.PARAM_SYMBOLS_HTML[key]}): {value_string} "
-                f"{self.factors_html[key]} {self.units_html[key]}"
-            )
-
-            # Add (fixed) if the parameter was fixed
+            values = [popt[key] for popt in popts]
+            values_str = [f"{get_power_html(value, 2)} {self.units_html[key]}" for value in values]
+            label = f"{self.PARAM_FULLNAME[key]} ({self.PARAM_SYMBOLS_HTML[key]})"
             if key in fixed_parameters[0]:
                 label += " (fixed)"
-
-            popts_labels.append(label)
-
-        popts_labels.append(f"Coefficient of determination R<sup>2</sup>: {cod:.5f}")
+            popt_dict[label] = values_str
+        popt_dict["Coefficient of determination R<sup>2</sup>"] = [f"{cod:.3f}"] * len(N0s)
+        popt_df = pd.DataFrame.from_dict(
+            popt_dict,
+            orient="index",
+            columns=get_power_html(N0s, -1),
+        )
+        popt_df.columns.name = "N<sub>0</sub> (cm<sup>-3</sup>)"
 
         # Contributions
         contributions = []
@@ -347,6 +355,13 @@ class Model(object):
             contributions.append(self.calculate_contributions(x_data, **kwargs))
         contributions = list_to_dict(contributions)
         contributions = {key: np.array(value) for key, value in contributions.items()}
+
+        # Contributions dataframe
+        contributions_dict = {}
+        for key in contributions:
+            contributions_dict[self.CBT_LABELS[key]] = [f"{value:.1f}" for value in contributions[key]]
+        contributions_df = pd.DataFrame.from_dict(contributions_dict, orient="index", columns=get_power_html(N0s, -1))
+        contributions_df.columns.name = "N<sub>0</sub> (cm<sup>-3</sup>)"
 
         # All values together (guess, optimised, R2 and contributions)
         all_values = dict()  # all values
@@ -367,18 +382,19 @@ class Model(object):
             all_values["max. " + self.CBT_LABELS[key]] = np.max(contributions[key])
 
         return {
+            "xs_data": xs_data,
+            "ys_data": ys_data,
             "popts": popts,
+            "popt_df": popt_df,
             "cod": cod,
-            "contributions": contributions,
             "fit_ydata": fit_ydata,
-            "popt_labels": popts_labels,
+            "contributions": contributions,
+            "contributions_df": contributions_df,
             "N0s": N0s,  # keep a copy of the N0s used for the fits
-            "N0s_labels": get_power_labels(N0s),
+            "N0s_labels": get_concentrations_html(N0s),
             "p0": p0,
             "all_values": all_values,
             "hidden_keys": hidden_keys,
-            "xs_data": xs_data,
-            "ys_data": ys_data,
         }
 
     def grid_fitting(
@@ -479,6 +495,8 @@ class Model(object):
 class BTModel(Model):
     """Class for the Bimolecular-Trapping model"""
 
+    MODEL = "BTA"
+
     def __init__(self, param_ids: list):
         """Object constructor"""
 
@@ -486,7 +504,7 @@ class BTModel(Model):
             "k_B": "cm3/ns",
             "k_T": "ns-1",
             "k_A": "cm6/ns-1",
-            "mu": "cm^2/(V s)",
+            "mu": "cm2/(V s)",
         }
         units_html = {
             "k_B": "cm<sup>3</sup>/ns",
@@ -614,6 +632,8 @@ class BTModel(Model):
 
 class BTModelTRPL(BTModel):
 
+    QUANTITY = "TRPL"
+
     def __init__(self) -> None:
         BTModel.__init__(self, ["k_T", "k_B", "k_A", "y_0", "I"])
 
@@ -652,6 +672,8 @@ class BTModelTRPL(BTModel):
 
 
 class BTModelTRMC(BTModel):
+
+    QUANTITY = "TRMC"
 
     def __init__(self) -> None:
         BTModel.__init__(self, ["k_T", "k_B", "k_A", "mu", "y_0"])
@@ -698,6 +720,8 @@ class BTModelTRMC(BTModel):
 class BTDModel(Model):
     """Class for the Bimolecular-Trapping-Detrapping model"""
 
+    MODEL = "BTD"
+
     def __init__(self, param_ids) -> None:
 
         units = {
@@ -706,8 +730,8 @@ class BTDModel(Model):
             "k_B": "cm3/ns",
             "k_T": "cm3/ns",
             "k_D": "cm3/ns",
-            "mu_e": "cm^2/(V s)",
-            "mu_h": "cm^2/(V s)",
+            "mu_e": "cm2/(V s)",
+            "mu_h": "cm2/(V s)",
         }
         units_html = {
             "N_T": "cm<sup>-3</sup>",
@@ -875,6 +899,8 @@ class BTDModel(Model):
 
 class BTDModelTRPL(BTDModel):
 
+    QUANTITY = "TRPL"
+
     def __init__(self) -> None:
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "y_0", "I"])
 
@@ -921,6 +947,8 @@ class BTDModelTRPL(BTDModel):
 
 
 class BTDModelTRMC(BTDModel):
+
+    QUANTITY = "TRMC"
 
     def __init__(self) -> None:
         BTDModel.__init__(self, ["k_B", "k_T", "k_D", "N_T", "p_0", "mu_e", "mu_h", "y_0"])

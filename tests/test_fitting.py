@@ -1,3 +1,12 @@
+"""Test module for the functions in the `fitting.py` module.
+
+This module contains unit tests for the functions implemented in the `fitting.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import numpy as np
 import pytest
 
@@ -101,6 +110,7 @@ class TestFit:
         """Gaussian data"""
 
         def gaussian(x: np.ndarray, a: float, x0: float, c: float) -> np.ndarray:
+            """Gaussian function"""
             return a * np.exp(-((x - x0) ** 2) / (2 * c))
 
         xs_data = [np.linspace(-2, 5, 101)] * 3

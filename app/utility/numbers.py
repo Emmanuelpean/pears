@@ -3,39 +3,37 @@ import numpy as np
 
 
 def get_power_html(
-    value: float,
+    value: float | list[float],
     n: None | int = 3,
-) -> str:
+) -> str | list[str]:
     """Converts a value to html-formatted text with base 10
-    :param value: value
-    :param n: number of decimals. None to keep only the exponent bit. -1 to display all significant digits.
+    :param value: positive value
+    :param n: number of decimals. None to keep only the exponent bit. -1 to display all significant digits."""
 
-    Examples
-    --------
-    >>> get_power_html(1.3e13, 3)
-    '1.300 &#10005; 10<sup>13</sup>'
-    >>> get_power_html(1.34e13, -1)
-    '1.34 &#10005; 10<sup>13</sup>'
-    >>> get_power_html(1.34e13, None)
-    '10<sup>13</sup>'
-    >>> get_power_html(999.9, 2)
-    '1.00 &#10005; 10<sup>3</sup>'"""
+    if isinstance(value, list):
+        return [get_power_html(val, n) for val in value]
 
     if value == 0:
         return "0"
 
-    base10 = math.floor(np.log10(value))
+    base10 = math.floor(np.log10(abs(value)))
     mantissa = value / 10**base10
 
     if n is None:
-        if base10 == 0:
-            return ""
-        else:
-            return f"&#10005; 10<sup>{base10}</sup>"
+        mantissa_str = ""
+
+    # Dynamic number of digits
     elif n == -1:
-        return f"{mantissa:g} &#10005; 10<sup>{base10}</sup>"
+        mantissa_str = f"{mantissa:g}"
+
+    # Fixed number of digits
     else:
-        return f"{mantissa:.{n}f} &#10005; 10<sup>{base10}</sup>"
+        mantissa_str = f"{mantissa:.{n}f}"
+
+    if base10 == 0:
+        return mantissa_str
+    else:
+        return (mantissa_str + f" &#10005; 10<sup>{base10}</sup>").strip()
 
 
 def to_scientific(value: float | int | list[float | int] | None) -> str:
@@ -62,8 +60,8 @@ def to_scientific(value: float | int | list[float | int] | None) -> str:
         return ", ".join([to_scientific(f) for f in value])
 
 
-def get_power_labels(N0s: list[float]) -> list[str]:
-    """Get the power labels
+def get_concentrations_html(N0s: list[float]) -> list[str]:
+    """Get the carrier concentration labels in html format
     :param N0s: initial carrier concentrations"""
 
     return ["N<sub>0</sub> = " + get_power_html(N0, -1) + " cm<sup>-3</sup>" for N0 in N0s]

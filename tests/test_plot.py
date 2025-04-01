@@ -1,3 +1,12 @@
+"""Test module for the functions in the `plot.py` module.
+
+This module contains unit tests for the functions implemented in the `plot.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import hiplot
 import numpy as np
 import plotly.graph_objects as go
@@ -7,6 +16,7 @@ from app.plot import parallel_plot, plot_carrier_concentrations, plot_decays, su
 
 
 class TestSubplots:
+
     def test_simple_subplot_creation(self) -> None:
         fig, positions = subplots(3)
         assert isinstance(fig, go.Figure)
@@ -27,6 +37,8 @@ class TestPlotDecays:
 
     @pytest.fixture
     def decay_data(self) -> dict[str, list]:
+        """Example data"""
+
         return {
             "xs_data": [np.array([1, 2, 3]), np.array([1, 2, 3])],
             "ys_data": [np.array([10, 5, 2]), np.array([8, 4, 1])],
@@ -35,6 +47,7 @@ class TestPlotDecays:
         }
 
     def test_plot_decays_trpl(self, decay_data) -> None:
+
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -49,6 +62,7 @@ class TestPlotDecays:
         assert "Intensity (a.u.)" in fig.layout.yaxis.title.text
 
     def test_plot_decays_trmc(self, decay_data) -> None:
+
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -61,6 +75,7 @@ class TestPlotDecays:
         assert "Intensity (cm<sup>2</sup>/(Vs))" in fig.layout.yaxis.title.text
 
     def test_plot_decays_trmc_auto_labels(self, decay_data) -> None:
+
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
@@ -71,24 +86,28 @@ class TestPlotDecays:
             assert trace.name == label
 
     def test_plot_decays_with_fit(self, decay_data) -> None:
+
         fig = plot_decays(
             decay_data["xs_data"],
             decay_data["ys_data"],
             "TRPL",
-            ys_data_fit=decay_data["ys_data_fit"],
+            ys_data2=decay_data["ys_data_fit"],
             labels=decay_data["labels"],
+            label2=" (fitted)",
         )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 4  # Four traces: two for data and two for fit
         assert fig.data[0].name == "Sample A"
-        assert fig.data[1].name == "Sample A (fit)"
+        assert fig.data[1].name == "Sample A (fitted)"
         assert fig.data[2].name == "Sample B"
-        assert fig.data[3].name == "Sample B (fit)"
+        assert fig.data[3].name == "Sample B (fitted)"
         assert "dash" in fig.data[1].line
         assert "dash" in fig.data[3].line
 
 
 class SimpleCarrierModel:
+    """Simple carrier model for testing purposes"""
+
     def __init__(self) -> None:
         self.CONC_LABELS_HTML = {"e": "Electrons", "h": "Holes"}
         self.CONC_COLORS = {"e": "blue", "h": "red"}
@@ -98,6 +117,7 @@ class TestPlotCarrierConcentrations:
 
     @pytest.fixture
     def carrier_data(self) -> dict:
+        """Example data"""
 
         model = SimpleCarrierModel()
 

@@ -1,6 +1,14 @@
+"""Test module for the functions in the `main.py` module.
+
+This module contains unit tests for the functions implemented in the `main.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import copy
 import os
-import sys
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
@@ -13,17 +21,111 @@ from app.utility.data import are_close
 
 class TestApp:
 
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     main_path = "app/main.py"
+
+    def teardown_method(self) -> None:
+        """Teardown method that runs after each test."""
+
+        # Make sure that no exception happened
+        assert len(self.at.exception) == 0
 
     def test_default(self) -> None:
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
-        assert at.info[0].value == "Load a data file"
-        assert len(at.error) == 0
-        assert at.expander[-1].label == "License & Disclaimer"
+        self.at = AppTest(self.main_path, default_timeout=100).run()
+        assert self.at.info[0].value == "Load a data file"
+        assert len(self.at.error) == 0
+        assert self.at.expander[-1].label == "License & Disclaimer"
+
+    def get_widget_by_key(
+        self,
+        widget: str,
+        key: str,
+        verbose: bool = False,
+    ):
+        """Get a widget given its key
+        :param widget: widget type
+        :param key: key
+        :param verbose: if True, print the index of the widget"""
+
+        keys = [wid.key for wid in getattr(self.at, widget)]
+        if verbose:
+            print(keys)  # pragma: no cover
+        index = keys.index(key)
+        if verbose:
+            print(index)  # pragma: no cover
+        return getattr(self.at, widget)[index]
+
+    def set_period(self, value: str):
+        """Set the repetition period"""
+
+        self.get_widget_by_key("text_input", "period_input_").set_value(value).run()
+
+    def set_app_mode(self, value: str):
+        """Set the app mode"""
+
+        self.get_widget_by_key("selectbox", "fit_mode_").set_value(value).run()
+
+    def set_quantity(self, value: str):
+        """Set the fit quantity"""
+
+        self.get_widget_by_key("radio", "quantity_input_").set_value(value).run()
+
+    def set_model(self, value: str):
+        """Set the model"""
+
+        self.get_widget_by_key("selectbox", "model_name_").set_value(value).run()
+
+    def run(self):
+        """Press the run button"""
+
+        self.get_widget_by_key("button", "run_button").click().run()
+
+    def set_data_delimiter(self, value: str):
+        """Set the data delimiter"""
+
+        self.get_widget_by_key("radio", "data_delimiter").set_value(value).run()
+
+    def set_data_format(self, value: str):
+        """Set the data format"""
+
+        self.get_widget_by_key("radio", "data_format_").set_value(value).run()
+
+    def set_preprocess(self, value: bool):
+        """Set the pre-processing option"""
+
+        self.get_widget_by_key("checkbox", "preprocess_").set_value(value).run()
+
+    def set_fixed_parameter(self, key: str, value: str, model: str = "BTA"):
+        """Set the fixed parameter value"""
+
+        self.get_widget_by_key("text_input", model + key + "fixed").set_value(value).run()
+
+    def set_guess_parameter(self, key: str, value: str, model: str = "BTA"):
+        """Set the guess parameter value"""
+
+        self.get_widget_by_key("text_input", model + key + "guess").set_value(value).run()
+
+    def set_guesses_parameter(self, key: str, value: str, model: str = "BTA"):
+        """Set the guess value range"""
+
+        self.get_widget_by_key("text_input", model + key + "guesses").set_value(value).run()
+
+    def set_matching_input(self, value):
+        """Set the matching input"""
+
+        self.get_widget_by_key("text_input", "matching_input").set_value(value).run()
+
+    def fill_N0s(self, N0s: list[float | str]) -> None:
+        """Fill the photoexcited carrier concentrations inputs
+        :param N0s: photoexcited carrier concentration values"""
+
+        widgets = [self.get_widget_by_key("text_input", f"fluence_{i}") for i in range(len(N0s))]
+        assert len(widgets) == len(N0s)
+
+        for text_input, N0 in zip(widgets, N0s):
+            text_input.input(str(N0))
+        self.at.run()
 
     @staticmethod
     def create_mock_file(mock_file_uploader: MagicMock, data: np.ndarray) -> None:
@@ -60,41 +162,31 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Select the correct quantity
-        at.sidebar.radio[2].set_value(quantity)
+        self.set_quantity(quantity)
 
         # Pre-processing
         if preprocess:
-            at.sidebar.checkbox[0].set_value(True)
+            self.set_preprocess(True)
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(dataset[2])
-        for text_input, N0 in zip(at.sidebar.text_input, dataset[2]):
-            text_input.input(str(N0))
-        at.run()
+        self.fill_N0s(dataset[2])
 
         # Select the model
-        at.sidebar.selectbox[1].set_value(model)
-
-        # Check that the run button is present
-        assert len(at.sidebar.button) == 1
-        assert at.sidebar.button[0].label == "Run"
+        self.set_model(model)
 
         # Click on the button and assert the fit results
-        at.sidebar.button[0].click()
-        at.run()
+        self.run()
 
-        assert are_close(at.session_state["results"][0]["popts"][0], expected_output["popt"])
-        assert are_close(at.session_state["results"][0]["contributions"], expected_output["contributions"])
+        assert are_close(self.at.session_state["results"][0]["popts"][0], expected_output["popt"])
+        assert are_close(self.at.session_state["results"][0]["contributions"], expected_output["contributions"])
 
-        at.sidebar.text_input[-1].set_value("200")
-        at.run()
+        self.set_period("200")
 
-        assert are_close(at.session_state["carrier_accumulation"]["CA"], expected_output["ca"])
-        assert len(at.error) == 0
+        assert are_close(self.at.session_state["carrier_accumulation"]["CA"], expected_output["ca"])
+        assert len(self.at.error) == 0
 
     def test_bt_trpl(self) -> None:
         expected = {
@@ -210,17 +302,13 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(data[0]) - 1
-        at.sidebar.text_input[0].input("1e12")
-        at.sidebar.text_input[1].input("1e12fd")
-        at.run()
+        self.fill_N0s(["f", "3"])
 
         expected = "Uh-oh! The initial carrier concentrations input is not valid"
-        assert at.error[0].value == expected
+        assert self.at.error[0].value == expected
 
     @patch("streamlit.sidebar.file_uploader")
     def test_invalid_fixed_guess_value(self, mock_file_uploader: MagicMock) -> None:
@@ -230,45 +318,27 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(BT_TRPL_DATA[2])
-        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
-            text_input.input(str(N0))
-        at.run()
+        self.fill_N0s(BT_TRPL_DATA[2])
 
         # Change the fixed value to an incorrect value
-        at.sidebar.text_input[3].set_value("3")
-        at.run()
-        at.sidebar.text_input[3].set_value("f")
-        at.run()
-
-        assert at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] == 3
-        assert len(at.error) == 0
+        self.set_fixed_parameter("k_T", "3")
+        self.set_fixed_parameter("k_T", "f")
+        assert self.at.session_state["models"]["BTA"]["TRPL"].fvalues["k_T"] == 3
 
         # Change the guess value to an incorrect value
-        at.sidebar.text_input[3].set_value("")  # reset the fixed value
-        at.run()
-        at.sidebar.text_input[4].set_value("3")  # set the guess value
-        at.run()
-        at.sidebar.text_input[4].set_value("f")  # set the guess value with incorrect string
-        at.run()
-
-        assert at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] == 3
-        assert len(at.error) == 0
+        self.set_fixed_parameter("k_T", "")  # reset the fixed value
+        self.set_guess_parameter("k_T", "3")  # set the guess value
+        self.set_guess_parameter("k_T", "f")  # guess value with incorrect string
+        assert self.at.session_state["models"]["BTA"]["TRPL"].gvalues["k_T"] == 3
 
         # Change the fixed value range to an incorrect value
-        at.sidebar.selectbox[0].set_value("Grid Fitting")
-        at.run()
-        at.sidebar.text_input[4].set_value("2,5,6")
-        at.run()
-        at.sidebar.text_input[4].set_value("2,5,f")
-        at.run()
-
-        assert at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] == [2.0, 5.0, 6.0]
-        assert len(at.error) == 0
+        self.set_app_mode(APP_MODES[1])
+        self.set_guesses_parameter("k_T", "2,5,6")
+        self.set_guesses_parameter("k_T", "2,5,f")
+        assert self.at.session_state["models"]["BTA"]["TRPL"].gvalues_range["k_T"] == [2.0, 5.0, 6.0]
 
     @patch("streamlit.sidebar.file_uploader")
     def test_bad_fitting(self, mock_file_uploader: MagicMock) -> None:
@@ -278,26 +348,19 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(BT_TRPL_DATA[2])
-        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
-            text_input.input(str(N0))
-        at.run()
+        self.fill_N0s(BT_TRPL_DATA[2])
 
         # Change the fixed value to an incorrect value
-        at.sidebar.text_input[4].set_value("-1")
-        at.run()
+        self.set_guess_parameter("k_T", "-1")
 
         # Click on the button and assert the fit results
-        at.sidebar.button[0].click()
-        at.run()
+        self.run()
 
         expected = "The data could not be fitted. Try changing the parameter guess or fixed values."
-        assert at.error[0].value == expected
-        assert len(at.error) == 1
+        assert self.at.error[0].value == expected
 
     @patch("streamlit.sidebar.file_uploader")
     def test_uneven_column_file(self, mock_file_uploader: MagicMock):
@@ -312,12 +375,11 @@ class TestApp:
         os.remove(temp_path)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
-        assert at.error[0].value == expected
-        assert len(at.error) == 1
+        assert self.at.error[0].value == expected
+        assert len(self.at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_uneven_column_file2(self, mock_file_uploader: MagicMock):
@@ -331,12 +393,11 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, np.transpose([x, y_str]))
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch at index 1: x and y columns must have the same length."
-        assert at.error[0].value == expected
-        assert len(at.error) == 1
+        assert self.at.error[0].value == expected
+        assert len(self.at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_column_file(self, mock_file_uploader: MagicMock):
@@ -350,15 +411,14 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
-        at.sidebar.radio[0].set_value("X1/Y1/X2/Y2...")
-        at.run()
+        # Change the data format
+        self.set_data_format("X1/Y1/X2/Y2...")
 
         expected = "Uh-oh! The data could not be loaded. Error: Mismatch: x data and y data must have the same number of columns."
-        assert at.error[0].value == expected
-        assert len(at.error) == 1
+        assert self.at.error[0].value == expected
+        assert len(self.at.error) == 1
 
     @patch("streamlit.sidebar.file_uploader")
     def test_incorrect_delimiter(self, mock_file_uploader: MagicMock):
@@ -368,15 +428,87 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
-        at.sidebar.radio[1].set_value(";")
-        at.run()
+        # Change the delimiter
+        self.set_data_delimiter(";")
 
         expected = "Uh-oh! The data could not be loaded. Error: Unknown error, Check that the correct delimiter has been selected."
-        assert at.error[0].value == expected
-        assert len(at.error) == 1
+        assert self.at.error[0].value == expected
+        assert len(self.at.error) == 1
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_failed_ca(self, mock_file_uploader: MagicMock) -> None:
+
+        # Save and load the data
+        self.create_mock_file(mock_file_uploader, np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1]))
+
+        # Start the app and run it
+        self.at = AppTest(self.main_path, default_timeout=100).run()
+
+        # Check the number of fluence inputs
+        self.fill_N0s(BT_TRPL_DATA[2])
+
+        # Set the period
+        self.set_period("0.0001")
+
+        # Click on the button and assert the fit results
+        self.run()
+
+        assert self.at.session_state["carrier_accumulation"] == {}
+        expected = "Carrier accumulation could not be calculated due to excessive computational requirements."
+        assert self.at.warning[0].value == expected
+
+        # Set the app mode
+        self.set_app_mode(APP_MODES[1])
+
+        # Click on the run button and assert the fit results
+        self.run()
+
+        assert self.at.session_state["carrier_accumulation"] == []
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_failed_matching(self, mock_file_uploader: MagicMock) -> None:
+
+        # Save and load the data
+        self.create_mock_file(mock_file_uploader, np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1]))
+
+        # Start the app and run it
+        self.at = AppTest(self.main_path, default_timeout=100).run()
+
+        # Check the number of fluence inputs
+        self.fill_N0s(BT_TRPL_DATA[2])
+
+        # Click on the button and assert the fit results
+        self.run()
+
+        self.set_matching_input("f")
+
+        assert self.at.warning[0].value == "Please input correct values."
+
+    @patch("streamlit.sidebar.file_uploader")
+    def test_bad_grid_fitting(self, mock_file_uploader: MagicMock) -> None:
+
+        # Load the data
+        data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
+        self.create_mock_file(mock_file_uploader, data)
+
+        # Start the app and run it
+        self.at = AppTest(self.main_path, default_timeout=100).run()
+
+        self.set_app_mode(APP_MODES[1])
+
+        # Check the number of fluence inputs
+        self.fill_N0s(BT_TRPL_DATA[2])
+
+        # Change the fixed value to an incorrect value
+        self.set_guesses_parameter("k_T", "-1, -2")
+
+        # Click on the button and assert the fit results
+        self.run()
+
+        expected = "The data could not be fitted. Try changing the parameter guess or fixed values."
+        assert self.at.error[0].value == expected
 
     # ----------------------------------------------------- OTHERS -----------------------------------------------------
 
@@ -388,25 +520,19 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, data)
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(BT_TRPL_DATA[2])
-        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
-            text_input.input(str(N0))
-        at.run()
+        self.fill_N0s(BT_TRPL_DATA[2])
 
         # Click on the button and assert the fit results
-        at.sidebar.button[0].click()
-        at.run()
+        self.run()
 
         # Change settings
-        at.sidebar.text_input[4].set_value("1")
-        at.run()
+        self.set_guess_parameter("k_T", "1")
 
         expected = "You have changed some of the input settings. Press 'Run' to apply these changes."
-        assert at.warning[0].value == expected
+        assert self.at.warning[0].value == expected
 
     @patch("streamlit.sidebar.file_uploader")
     def test_stored_ca(self, mock_file_uploader: MagicMock) -> None:
@@ -415,27 +541,15 @@ class TestApp:
         data = np.transpose([BT_TRPL_DATA[0][0]] + BT_TRPL_DATA[1])
         self.create_mock_file(mock_file_uploader, data)
 
-        # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
-
-        # Check the number of fluence inputs
-        assert len(at.text_input) == len(BT_TRPL_DATA[2])
-        for text_input, N0 in zip(at.sidebar.text_input, BT_TRPL_DATA[2]):
-            text_input.input(str(N0))
-        at.run()
-
-        # Click on the run button
-        at.sidebar.button[0].click()
-        at.run()
-
-        at.sidebar.text_input[-1].set_value("100")
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()  # start the app and run it
+        self.fill_N0s(BT_TRPL_DATA[2])  # check the number of fluence inputs
+        self.run()  # click on the run button
+        self.set_period("100")  # set the period
 
         # Rerun
-        at.run()
-        assert at.session_state.carrier_accumulation is not None
-        assert len(at.error) == 0
+        self.at.run()
+        assert self.at.session_state.carrier_accumulation is not None
+        assert len(self.at.error) == 0
 
     # ------------------------------------------------ TEST GRID FITTING -----------------------------------------------
 
@@ -453,39 +567,33 @@ class TestApp:
         self.create_mock_file(mock_file_uploader, np.transpose([dataset[0][0]] + dataset[1]))
 
         # Start the app and run it
-        at = AppTest(self.main_path, default_timeout=100)
-        at.run()
+        self.at = AppTest(self.main_path, default_timeout=100).run()
 
         # Set the app mode
-        at.sidebar.selectbox[0].set_value(APP_MODES[1])
+        self.set_app_mode(APP_MODES[1])
 
         # Select the correct quantity
-        at.sidebar.radio[2].set_value(quantity)
+        self.set_quantity(quantity)
 
         # Check the number of fluence inputs
-        assert len(at.text_input) == len(dataset[2])
-        for text_input, N0 in zip(at.sidebar.text_input, dataset[2]):
-            text_input.input(str(N0))
-        at.run()
+        self.fill_N0s(dataset[2])
 
         # Select the model
-        at.sidebar.selectbox[1].set_value(model)
+        self.set_model(model)
 
         # Check that the run button is present
-        assert len(at.sidebar.button) == 1
-        assert at.sidebar.button[0].label == "Run"
+        assert len(self.at.sidebar.button) == 1
+        assert self.at.sidebar.button[0].label == "Run"
 
         # Click on the button and assert the fit results
-        at.sidebar.button[0].click()
-        at.run()
+        self.run()
 
-        assert at.markdown[1].value == "### Displaying results of fit #1"
-        at.sidebar.text_input[-1].set_value("200")
-        at.run()
+        assert self.at.markdown[1].value == "## Parallel plot"
+        self.set_period("200")
 
-        ca = [f["CA"] for f in at.session_state["carrier_accumulation"]]
+        ca = [f["CA"] for f in self.at.session_state["carrier_accumulation"]]
         assert are_close(ca, expected_output)
-        assert len(at.error) == 0
+        assert len(self.at.error) == 0
 
     def test_bt_trpl_grid(self) -> None:
         expected = [

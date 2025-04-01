@@ -1,7 +1,17 @@
+"""Test module for the functions in the `utility/data.py` module.
+
+This module contains unit tests for the functions implemented in the `data.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import os
 from unittest.mock import mock_open, patch
 
 import pytest
+from bs4 import BeautifulSoup
 
 from app.utility.data import *
 
@@ -536,3 +546,109 @@ class TestReadTxtFile:
         # Check that the function raises FileNotFoundError
         with pytest.raises(FileNotFoundError):
             read_txt_file(self.TEMP_FILE)
+
+
+class TestGenerateHtmlTable:
+    @pytest.fixture
+    def sample_dataframe(self):
+        """Create a sample dataframe for testing."""
+
+        data = {"A": [1, 2, 3, 4], "B": [5, 6, 7, 8], "C": [9, 10, 11, 12]}
+        df = pd.DataFrame(data, index=["row1", "row2", "row3", "row4"])
+        return df
+
+    @pytest.fixture
+    def dataframe_with_identical_rows(self):
+        """Create a dataframe with some identical rows."""
+
+        data = {"A": [1, 2, 2, 3], "B": [5, 2, 2, 7], "C": [9, 2, 2, 11]}
+        df = pd.DataFrame(data, index=["row1", "row2", "row3", "row4"])
+        return df
+
+    @pytest.fixture
+    def dataframe_with_column_name(self):
+        """Create a dataframe with a column name."""
+
+        data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
+        df = pd.DataFrame(data, index=["row1", "row2", "row3"])
+        df.columns.name = "Categories"
+        return df
+
+    def test_basic_table_generation(self, sample_dataframe):
+        """Test basic HTML table generation."""
+
+        html = generate_html_table(sample_dataframe)
+
+        # Verify structure using BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Check table exists
+        table = soup.find("table")
+        assert table is not None
+
+        # Check number of rows (header + data rows)
+        rows = table.find_all("tr")
+        assert len(rows) == 5  # 1 header + 4 data rows
+
+        # Check header row
+        header_cells = rows[0].find_all(["th"])
+        assert len(header_cells) == 4  # corner cell + 3 columns
+
+        # Check data cells
+        data_rows = rows[1:]
+        for i, row in enumerate(data_rows):
+            cells = row.find_all("td")
+            assert cells[0].text == f"row{i + 1}"  # Check row name
+
+    def test_merged_cells_for_identical_values(self, dataframe_with_identical_rows):
+        """Test that cells are merged when all values in a row are identical."""
+        html = generate_html_table(dataframe_with_identical_rows)
+
+        soup = BeautifulSoup(html, "html.parser")
+        rows = soup.find_all("tr")
+
+        # Check row2 and row3 have merged cells
+        row2 = rows[2]  # index 2 corresponds to row2
+        row3 = rows[3]  # index 3 corresponds to row3
+
+        # Check for colspan in row2 and row3
+        assert row2.find_all("td")[1].has_attr("colspan")
+        assert row2.find_all("td")[1]["colspan"] == "3"
+        assert row3.find_all("td")[1].has_attr("colspan")
+        assert row3.find_all("td")[1]["colspan"] == "3"
+
+        # Check normal rows don't have merged cells
+        row1 = rows[1]  # index 1 corresponds to row1
+        row4 = rows[4]  # index 4 corresponds to row4
+        assert len(row1.find_all("td")) == 4  # 1 row name + 3 data cells
+        assert len(row4.find_all("td")) == 4  # 1 row name + 3 data cells
+
+    def test_column_name_in_corner(self, dataframe_with_column_name):
+        """Test that the column name appears in the corner cell."""
+        html = generate_html_table(dataframe_with_column_name)
+
+        soup = BeautifulSoup(html, "html.parser")
+        corner_cell = soup.find("tr").find("th")
+
+        assert corner_cell.text == "Categories"
+
+    def test_empty_corner_cell_with_no_column_name(self, sample_dataframe):
+        """Test that the corner cell is empty when no column name is provided."""
+        html = generate_html_table(sample_dataframe)
+
+        soup = BeautifulSoup(html, "html.parser")
+        corner_cell = soup.find("tr").find("th")
+
+        assert corner_cell.text == ""
+
+    def test_div_wrapper(self, sample_dataframe):
+        """Test that the table is wrapped in a div with correct styling."""
+        html = generate_html_table(sample_dataframe)
+
+        soup = BeautifulSoup(html, "html.parser")
+        div = soup.find("div")
+
+        assert div is not None
+        assert div.has_attr("style")
+        assert "margin: auto" in div["style"]
+        assert "display: table" in div["style"]

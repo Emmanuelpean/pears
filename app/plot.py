@@ -45,17 +45,22 @@ def plot_decays(
     xs_data: list[np.ndarray],
     ys_data: list[np.ndarray],
     quantity: str,
-    ys_data_fit: list[np.ndarray] | None = None,
+    ys_data2: list[np.ndarray] | None = None,
     labels: list[str] | None = None,
+    label2: str = " (fit)",
+    **kwargs,
 ) -> go.Figure:
     """Plot decays
     :param xs_data: list of np.ndarray associated with the x-axis
     :param ys_data: list of np.ndarray associated with the y-axis (raw data)
     :param quantity: quantity fitted: 'TRPL' or 'TRMC'
-    :param ys_data_fit: list of np.ndarray associated with the y-axis (fit)
-    :param labels: list of labels or floats"""
+    :param ys_data2: optional list of np.ndarray associated with the y-axis
+    :param labels: list of labels or floats
+    :param label2: optional string appended to the labels of ys_data2
+    :param kwargs: keyword arguments passed to the update_layout method of the figure"""
 
     figure = go.Figure()
+
     if labels is None:
         labels = [f"Decay {i + 1}" for i in range(len(xs_data))]
 
@@ -67,11 +72,11 @@ def plot_decays(
             line=dict(color=COLORS[i]),
         )
         figure.add_trace(scatter)
-        if ys_data_fit is not None:
+        if ys_data2 is not None:
             scatter = go.Scatter(
                 x=xs_data[i],
-                y=ys_data_fit[i],
-                name=labels[i] + " (fit)",
+                y=ys_data2[i],
+                name=labels[i] + label2,
                 line=dict(color=COLORS[i], dash="dash"),
             )
             figure.add_trace(scatter)
@@ -102,10 +107,44 @@ def plot_decays(
         showgrid=True,
         gridcolor="lightgray",
     )
+    yaxes_layout = figure.layout.yaxis.to_plotly_json()
 
     figure.update_layout(
         margin=dict(l=10, r=10, t=40, b=10, pad=0),
         plot_bgcolor="#f0f4f8",
+        updatemenus=list(
+            [
+                dict(
+                    active=0,
+                    buttons=list(
+                        [
+                            dict(
+                                label="Linear Scale",
+                                method="relayout",
+                                args=[{"yaxis": {"type": "linear", **yaxes_layout}}],
+                            ),
+                            dict(
+                                label="Log Scale",
+                                method="relayout",
+                                args=[
+                                    {
+                                        "yaxis": {
+                                            "type": "log",
+                                            "tickformat": ".0e",
+                                            "dtick": 1,
+                                            **yaxes_layout,
+                                        }
+                                    },
+                                ],
+                            ),
+                        ]
+                    ),
+                    x=0.9,
+                    y=1.15,
+                )
+            ]
+        ),
+        **kwargs,
     )
 
     return figure
@@ -204,6 +243,8 @@ class _StreamlitHelpers:  # pragma: no cover
 
     @staticmethod
     def is_running_within_streamlit() -> bool:
+        """Check if the code is running within a Streamlit environment."""
+
         try:
             import streamlit as st
         except:  # pylint: disable=bare-except
@@ -212,6 +253,8 @@ class _StreamlitHelpers:  # pragma: no cover
 
     @classmethod
     def create_component(cls) -> tp.Optional[tp.Callable[..., tp.Any]]:
+        """Create and return a Streamlit component for rendering HiPlot visualizations."""
+
         if cls.component is not None:
             return cls.component
         import streamlit as st

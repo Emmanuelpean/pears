@@ -1,3 +1,12 @@
+"""Test module for the functions in the `models.py` module.
+
+This module contains unit tests for the functions implemented in the `models.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import numpy as np
 import pytest
 
@@ -39,6 +48,7 @@ class TestModel:
 
     @pytest.fixture
     def model(self) -> Model:
+        """Example Model object"""
 
         param_ids = ["k_B", "k_T", "k_A", "y_0"]
         units = {"k_B": "cm^3/ns", "k_T": "1/ns", "k_A": "cm^6/ns"}
@@ -52,6 +62,7 @@ class TestModel:
         param_filters = []
 
         def n_init(N_0) -> dict[str, float]:  # pragma: no cover
+            """Return the photoexcited carrier concentration"""
             return {"n": N_0}
 
         return Model(
@@ -135,6 +146,7 @@ class TestBTModel:
 
     @pytest.fixture
     def model(self) -> BTModel:
+        """Example BTModel object"""
 
         return BTModel(["k_T", "k_B", "k_A", "mu", "y_0"])
 
@@ -170,8 +182,8 @@ class TestBTModel:
 
         # Period provided
         output = model.get_carrier_concentrations([T], popts, 100)
-        assert np.allclose(output[2][0]["n"][:3], np.array([1.00000000e17, 9.94032709e16, 9.88130378e16]))
-        assert np.allclose(output[0][0][:3], np.array([0.00000000e00, 9.99010979e-04, 1.99802196e-03]))
+        assert np.allclose(output[2][0]["n"][:3], np.array([1.00000000e17, 9.70802526e16, 9.43127550e16]))
+        assert np.allclose(output[0][0][:3], np.array([0.0, 0.00498008, 0.00996016]))
 
         # Period not provided
         output2 = model.get_carrier_concentrations([T], popts, 0)
@@ -235,17 +247,21 @@ class TestBTModelTRPL:
     def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
-        popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BT_KWARGS} for n in N0s]
+        popts = [{"N_0": n, **BT_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTModelTRPL().get_carrier_accumulation(popts, 100)["CA"]
-        expected = [np.float64(2.1474605461112906), np.float64(0.3260927825203319)]
-        assert are_close(output, expected)
+        output = BTModelTRPL().get_carrier_accumulation(popts, 100)
+        ca_expected = [np.float64(2.1474605461112906), np.float64(0.3260927825203319)]
+        decay_expected = [1.0, 9.99896859e-01, 9.99896716e-01]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
         # 50 ns period
-        output = BTModelTRPL().get_carrier_accumulation(popts, 50)["CA"]
-        expected = [np.float64(4.931657664085842), np.float64(0.8414419278757801)]
-        assert are_close(output, expected)
+        output = BTModelTRPL().get_carrier_accumulation(popts, 50)
+        ca_expected = [np.float64(4.931657664085842), np.float64(0.8414419278757801)]
+        decay_expected = [1.0, 0.99989505, 0.99989491]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
     def test_generate_decays(self) -> None:
 
@@ -472,17 +488,21 @@ class TestBTModelTRMC:
     def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
-        popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, "mu": 10, **BT_KWARGS} for n in N0s]
+        popts = [{"N_0": n, **BT_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTModelTRMC().get_carrier_accumulation(popts, 100)["CA"]
-        expected = [np.float64(1.8119795431245034), np.float64(0.2751318097141131)]
-        assert are_close(output, expected)
+        output = BTModelTRMC().get_carrier_accumulation(popts, 100)
+        ca_expected = [np.float64(1.8119795431245034), np.float64(0.2751318097141131)]
+        decay_expected = [20.22572435, 20.22468127, 20.22467983]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
         # 50 ns period
-        output = BTModelTRMC().get_carrier_accumulation(popts, 50)["CA"]
-        expected = [np.float64(4.161872397435568), np.float64(0.7099465316118103)]
-        assert are_close(output, expected)
+        output = BTModelTRMC().get_carrier_accumulation(popts, 50)
+        ca_expected = [np.float64(4.161872397435568), np.float64(0.7099465316118103)]
+        decay_expected = [20.58756773, 20.58648736, 20.58648594]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
     def test_generate_decays(self) -> None:
 
@@ -680,6 +700,7 @@ class TestBTDModel:
 
     @pytest.fixture
     def model(self) -> BTDModel:
+        """Example BTDModel"""
 
         return BTDModel(["k_B", "k_T", "k_D", "N_T", "p_0", "mu_e", "mu_h"])
 
@@ -721,17 +742,17 @@ class TestBTDModel:
 
         # Period provided
         output = model.get_carrier_concentrations([T], popts, 100)
-        assert np.allclose(output[2][0]["n_e"][:3], np.array([1.0000000e17, 9.9460356e16, 9.8954829e16]))
-        assert np.allclose(output[2][0]["n_t"][:3], np.array([0.00000000e00, 4.17344709e13, 5.42120112e13]))
-        assert np.allclose(output[2][0]["n_h"][:3], np.array([1.00000000e17, 9.95020905e16, 9.90090410e16]))
-        assert np.allclose(output[0][0][:3], np.array([0.0, 0.00099901, 0.00199802]))
+        assert np.allclose(output[2][0]["n_e"][:3], np.array([1.00000000e17, 9.74992405e16, 9.51739441e16]))
+        assert np.allclose(output[2][0]["n_t"][:3], np.array([0.00000000e00, 5.94487983e13, 5.96016786e13]))
+        assert np.allclose(output[2][0]["n_h"][:3], np.array([1.00000000e17, 9.75586893e16, 9.52335458e16]))
+        assert np.allclose(output[0][0][:3], np.array([0.0, 0.00498008, 0.00996016]))
 
         # Period not provided
-        output2 = model.get_carrier_concentrations([T], popts, 0)
-        assert np.allclose(output2[2][0]["n_e"][:3], np.array([1.00000000e17, 9.51739441e16, 9.08408676e16]))
-        assert np.allclose(output2[2][0]["n_t"][:3], np.array([0.00000000e00, 5.96016786e13, 5.96021105e13]))
-        assert np.allclose(output2[2][0]["n_h"][:3], np.array([1.00000000e17, 9.52335458e16, 9.09004697e16]))
-        assert np.allclose(output2[0][0][:3], np.array([0.0, 1.0, 2.0]))
+        output = model.get_carrier_concentrations([T], popts, 0)
+        assert np.allclose(output[2][0]["n_e"][:3], np.array([1.00000000e17, 9.51739441e16, 9.08408676e16]))
+        assert np.allclose(output[2][0]["n_t"][:3], np.array([0.00000000e00, 5.96016786e13, 5.96021105e13]))
+        assert np.allclose(output[2][0]["n_h"][:3], np.array([1.00000000e17, 9.52335458e16, 9.09004697e16]))
+        assert np.allclose(output[0][0][:3], np.array([0.0, 1.0, 2.0]))
 
     def test_get_contribution_recommendations(self, model) -> None:
 
@@ -783,17 +804,21 @@ class TestBTDModelTRPL:
     def test_get_carrier_accumulation(self) -> None:
 
         N0s = [1e17, 1e18]
-        popts = [{"N_0": n, "I": 1.0, "y_0": 0.0, **BTD_KWARGS} for n in N0s]
+        popts = [{"N_0": n, **BTD_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTDModelTRPL().get_carrier_accumulation(popts, 100)["CA"]
-        expected = [np.float64(4.624820971652416), np.float64(0.5713873355827237)]
-        assert are_close(output, expected)
+        output = BTDModelTRPL().get_carrier_accumulation(popts, 100)
+        ca_expected = [np.float64(4.624820971652416), np.float64(0.5713873355827237)]
+        decay_expected = [1.0, 0.99989804, 0.9998979]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
         # 50 ns period
-        output = BTDModelTRPL().get_carrier_accumulation(popts, 50)["CA"]
-        expected = [np.float64(7.852802160625521), np.float64(1.1155396319428357)]
-        assert are_close(output, expected)
+        output = BTDModelTRPL().get_carrier_accumulation(popts, 50)
+        ca_expected = [np.float64(7.852802160625521), np.float64(1.1155396319428357)]
+        decay_expected = [1.0, 0.99989615, 0.99989602]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
     def test_generate_decays(self) -> None:
 
@@ -1029,14 +1054,18 @@ class TestBTDModelTRMC:
         popts = [{"N_0": n, **BTD_KWARGS} for n in N0s]
 
         # 100 ns period
-        output = BTDModelTRMC().get_carrier_accumulation(popts, 100)["CA"]
-        expected = [np.float64(3.912967640970455), np.float64(0.48314189311882694)]
-        assert are_close(output, expected)
+        output = BTDModelTRMC().get_carrier_accumulation(popts, 100)
+        ca_expected = [np.float64(3.912967640970455), np.float64(0.48314189311882694)]
+        decay_expected = [50.97705122, 50.97445232, 50.97444872]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
         # 50 ns period
-        output = BTDModelTRMC().get_carrier_accumulation(popts, 50)["CA"]
-        expected = [np.float64(6.63910507746735), np.float64(0.9422743536986633)]
-        assert are_close(output, expected)
+        output = BTDModelTRMC().get_carrier_accumulation(popts, 50)
+        ca_expected = [np.float64(6.63910507746735), np.float64(0.9422743536986633)]
+        decay_expected = [51.92211319, 51.91941704, 51.9194135]
+        assert are_close(output["CA"], ca_expected)
+        assert are_close(output["Pulse S"][-1][:3], decay_expected)
 
     def test_generate_decays(self) -> None:
 

@@ -4,6 +4,7 @@ import base64
 from io import StringIO
 
 import numpy as np
+import pandas as pd
 import streamlit as st
 
 
@@ -188,3 +189,42 @@ def read_txt_file(path: str) -> str:
 
     with open(path) as ofile:
         return ofile.read()
+
+
+def generate_html_table(df: pd.DataFrame) -> str:
+    """Generate an HTML table from a pandas DataFrame with merged cells for rows
+    where all values are identical. Includes row names (index), column names,
+    and displays the columns name in the upper-left corner cell.
+    :param df: pandas DataFrame to convert to HTML"""
+
+    html = ['<table border="1" style="border-collapse: collapse; text-align: center;">']
+
+    # Add header row with columns name in the corner cell
+    corner_cell_content = df.columns.name if df.columns.name else ""
+    header = f'<tr><th style="padding: 8px; text-align: center;">{corner_cell_content}</th>'
+    for col in df.columns:
+        header += f'<th style="padding: 8px; text-align: center;">{col}</th>'
+    header += "</tr>"
+    html.append(header)
+
+    # Process each row
+    for idx, row in df.iterrows():
+        values = row.tolist()
+
+        # Check if all values in the row are the same
+        if len(set(values)) == 1:
+            # All values are identical - merge cells, but keep row name
+            html.append(
+                f'<tr><td style="padding: 8px; font-weight: bold; text-align: center;">{idx}</td>'
+                + f'<td colspan="{len(df.columns)}" style="padding: 8px; text-align: center;">{values[0]}</td></tr>'
+            )
+        else:
+            # Normal row handling with row name
+            row_html = f'<tr><td style="padding: 8px; font-weight: bold; text-align: center;">{idx}</td>'
+            for val in values:
+                row_html += f'<td style="padding: 8px; text-align: center;">{val}</td>'
+            row_html += "</tr>"
+            html.append(row_html)
+
+    html.append("</table>")
+    return '<div style="margin: auto; display: table;">' + "\n".join(html) + "</div>"

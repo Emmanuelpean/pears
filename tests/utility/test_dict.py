@@ -1,3 +1,12 @@
+"""Test module for the functions in the `utility/dict.py` module.
+
+This module contains unit tests for the functions implemented in the `dict.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 import pytest
 
 from app.utility.dict import *

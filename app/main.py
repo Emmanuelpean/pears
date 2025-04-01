@@ -10,23 +10,25 @@ Carrier accumulation is reset if
 Changing any other value does not re-run the fit but displays a message about it"""
 
 import copy
-import sys
 import os
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+from streamlit.runtime.runtime_util import MessageSizeError
 
 import resources
 from models import models, Model
 from plot import plot_decays, plot_carrier_concentrations, parallel_plot
-from utility.data import load_data, matrix_to_string, process_data, render_image, read_txt_file
-from utility.numbers import get_power_labels, to_scientific
+from fitting import FitFailedException
+from utility.data import load_data, matrix_to_string, process_data, render_image, read_txt_file, generate_html_table
+from utility.dict import merge_dicts, list_to_dict
+from utility.numbers import get_concentrations_html, to_scientific
 
 __version__ = "2.0.0"
 __date__ = "March 2025"
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+dirname = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------- SET UP -------------------------------------------------------
@@ -264,7 +266,7 @@ if N0s is not None:
             gvalue = st.sidebar.text_input(
                 "Guess value",
                 help="Parameter initial guess value for the fitting.",
-                key=model_name + param_key + "guess",
+                key=key,
             )
 
             # Store the guess value
@@ -296,104 +298,120 @@ if N0s is not None:
 # ------------------------------------------------- REPETITION PERIOD --------------------------------------------------
 
 
-period = None
+period_input = None
+period = 0.0
 if N0s is not None:
     period_help = """Excitation repetition period. Used to calculate possible carrier accumulation between 
     consecutive excitation pulses."""
-    period = st.sidebar.text_input(
+    period_input = st.sidebar.text_input(
         "Excitation repetition period (ns)",
         help=period_help,
-        key="period_input",
+        key="period_input_",
         on_change=reset_carrier_accumulation,
     )
 
     try:
-        period = float(period)
+        period = float(period_input)
     except ValueError:
         pass
 
+
 # ----------------------------------------------------- RUN BUTTON -----------------------------------------------------
+
 
 run_button = False  # when pressed, run the fit
 if N0s is not None:
-    run_button = st.sidebar.button("Run")
+    run_button = st.sidebar.button("Run", use_container_width=True, key="run_button")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------- RESULTS DISPLAY --------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-results_container = st.empty()
-
 # display the results if results have been previously stored
-if st.session_state.results or run_button:
+try:
+    if st.session_state.results or run_button:
 
-    # Remove the data and fluence messages
-    data_message.empty()
-    fluence_message.empty()
+        # Remove the data and fluence messages
+        data_message.empty()
+        fluence_message.empty()
 
-    # ----------------------------------------------------- FITTING ----------------------------------------------------
+        # --------------------------------------------------- FITTING --------------------------------------------------
 
-    # If the run button has been clicked
-    if run_button:
-        info_message.info("Processing")
-        reset_results()
+        # If the run button has been clicked...
+        if run_button:
+            reset_results()  # reset the previously stored results
+            info_message.info("Processing")
 
-        # Fitting
-        if fit_mode == resources.FITTING_MODE:
-            try:
-                print("Calling fitting")
-                fit_output = model.fit(xs_data, ys_data, N0s)
-                st.session_state.results = copy.deepcopy([fit_output, model, N0s])
-            except ValueError:
-                bad_fit_message = "The data could not be fitted. Try changing the parameter guess or fixed values."
-                info_message.error(bad_fit_message)
-                raise AssertionError("Fit failed")
+            # Run the fitting or grid fitting and store the output in the session state
 
-        # Grid Fitting
-        else:
-            progressbar = st.sidebar.progress(0)  # initialise the progress bar
-            fit_output = model.grid_fitting(progressbar, N0s, xs_data=xs_data, ys_data=ys_data)
-            st.session_state.results = copy.deepcopy([fit_output, model, N0s])
+            # Fitting
+            if fit_mode == resources.FITTING_MODE:
+                try:
+                    print("Fitting the data")
+                    output = model.fit(xs_data, ys_data, N0s)
+                    st.session_state.results = copy.deepcopy([output, model, N0s])
+                except ValueError:
+                    raise FitFailedException()
 
-        info_message.empty()
-
-    # Retrieve the fit output, model and carrier concentrations from the session state
-    else:
-        # Check if the model settings or the carrier concentrations have changed
-        if st.session_state.results[1] != model or st.session_state.results[2] != N0s:
-            info_message.warning("You have changed some of the input settings. Press 'Run' to apply these changes.")
-        fit_output, model, N0s = st.session_state.results
-
-    # ---------------------------------------------- CARRIER ACCUMULATION ----------------------------------------------
-
-    carrier_accumulation: dict | list[dict] | None = None
-    if period:
-        if st.session_state.carrier_accumulation is None:  # if carrier accumulation has not been calculated
-            print("Calculating CA")
-            if fit_mode == resources.ANALYSIS_MODE:
-                carrier_accumulation = [model.get_carrier_accumulation(fit["popts"], period) for fit in fit_output]
+            # Grid Fitting
             else:
-                carrier_accumulation = model.get_carrier_accumulation(fit_output["popts"], period)
-            st.session_state.carrier_accumulation = carrier_accumulation  # store the carrier accumulation value
-        else:
+                progressbar = st.sidebar.progress(0)  # create the progress bar
+                output = model.grid_fitting(progressbar, N0s, xs_data=xs_data, ys_data=ys_data)
+                st.session_state.results = copy.deepcopy([output, model, N0s])
+                if len(output) == 0:
+                    raise FitFailedException()
+
+            info_message.empty()
+
+        # Check if the model settings or the carrier concentrations have changed
+        elif st.session_state.results[1] != model or st.session_state.results[2] != N0s:
+            info_message.warning("You have changed some of the input settings. Press 'Run' to apply these changes.")
+
+        # Retrieve the stored results from the session state
+        fit_output, fit_model, fit_N0s = st.session_state.results
+
+        # -------------------------------------------- CARRIER ACCUMULATION --------------------------------------------
+
+        carrier_accumulation = None
+        if period:
+            if st.session_state.carrier_accumulation is None:  # if carrier accumulation has not been calculated
+                print("Calculating CA")
+                if isinstance(fit_output, list):
+                    try:
+                        carrier_accumulation = [
+                            fit_model.get_carrier_accumulation(fit["popts"], period) for fit in fit_output
+                        ]
+                    except AssertionError:  # if carrier accumulation cannot be calculated
+                        carrier_accumulation = []
+                    except MessageSizeError:  # pragma: no cover # if too many numbers
+                        carrier_accumulation = []
+                else:
+                    try:
+                        carrier_accumulation = fit_model.get_carrier_accumulation(fit_output["popts"], period)
+                    except AssertionError:
+                        carrier_accumulation = dict()
+                st.session_state.carrier_accumulation = carrier_accumulation  # store the carrier accumulation value
+
             print("Getting stored CA")
             carrier_accumulation = st.session_state.carrier_accumulation
 
-    # -------------------------------------------------- PARALLEL PLOT -------------------------------------------------
+        # -------------------------------------------------- PARALLEL PLOT -------------------------------------------------
 
-    with results_container.container():
-
-        if fit_mode == resources.FITTING_MODE:
+        if isinstance(fit_output, dict):
             fit_displayed = fit_output
-            message = """#### Fitting results"""
+            selected = 0
+            message = "## Fitting results"
         else:
-            st.subheader("Parallel plot")
+            st.markdown("## Parallel plot")
 
             # Add the carrier accumulation to the values
             popts = []
             for i, fit_popt in enumerate(fit_output):
                 popt = fit_popt["all_values"].copy()
-                if carrier_accumulation is not None:
+                if (
+                    carrier_accumulation is not None  # carrier accumulation was calculated
+                    and len(carrier_accumulation) > 0  # calculation did not fail
+                ):
                     popt["Max. CA (%)"] = np.max(carrier_accumulation[i]["CA"])
                 popts.append(popt)
 
@@ -410,97 +428,185 @@ if st.session_state.results or run_button:
         st.markdown(message)
         col1, col2 = st.columns(2)
 
-        # -------------------------------------------- FITTING PLOT & EXPORT -------------------------------------------
+        with col1:
 
-        col1.markdown("#### Data Fit")
-        # Plot
-        figure = plot_decays(
-            fit_displayed["xs_data"],
-            fit_displayed["ys_data"],
-            quantity_input,
-            fit_displayed["fit_ydata"],
-            fit_displayed["N0s_labels"],
-        )
-        col1.plotly_chart(figure, use_container_width=True)
+            # -------------------------------------------- FITTING PLOT & EXPORT -------------------------------------------
 
-        # Export
-        header = np.concatenate([["Time (ns)", "Intensity %i" % i] for i in range(1, len(ys_data) + 1)])
-        data = [val for pair in zip(fit_displayed["xs_data"], fit_displayed["fit_ydata"]) for val in pair]
-        export_data = matrix_to_string(data, header)
-        col1.download_button("Download data", export_data, "pears_fit_data.csv")
+            st.markdown("#### Data Fit", help="Displays the raw and fitted data.")
 
-        # ---------------------------------------- OPTIMISED PARAMETERS DISPLAY ----------------------------------------
+            # Plot
+            figure = plot_decays(
+                xs_data=fit_displayed["xs_data"],
+                ys_data=fit_displayed["ys_data"],
+                quantity=fit_model.QUANTITY,
+                ys_data2=fit_displayed["fit_ydata"],
+                labels=fit_displayed["N0s_labels"],
+            )
+            st.plotly_chart(figure, use_container_width=True)
 
-        col1.markdown("""#### Parameters""")
-        popts_string = '<div class="custom-line-spacing">' + "<br/>".join(fit_displayed["popt_labels"]) + "</div>"
-        col1.markdown(popts_string, unsafe_allow_html=True)
+            # Export
+            header = np.concatenate([["Time (ns)", "Intensity %i" % i] for i in range(1, len(ys_data) + 1)])
+            data = [val for pair in zip(fit_displayed["xs_data"], fit_displayed["fit_ydata"]) for val in pair]
+            export_data = matrix_to_string(data, header)
+            st.download_button("Download Fits", export_data, "pears_fit_data.csv", use_container_width=True)
 
-        # ----------------------------------------------- CONTRIBUTIONS ------------------------------------------------
+            # -------------------------------------- OPTIMISED PARAMETERS DISPLAY --------------------------------------
 
-        col1.markdown("""#### Contributions""")
-        contributions = {model.CBT_LABELS[key]: value for key, value in fit_displayed["contributions"].items()}
-        contributions = pd.DataFrame(contributions, index=fit_displayed["N0s_labels"]).transpose()
-        col1.markdown(contributions.to_html(escape=False) + "<br>", unsafe_allow_html=True)
+            st.markdown("#### Parameters", help="Parameters obtained from the fit.")
+            table = generate_html_table(fit_displayed["popt_df"])
+            st.html(table)
 
-        # Contribution analysis
-        for s in model.get_contribution_recommendations(fit_displayed["contributions"]):
-            col1.warning(s)
+            # Export
+            df = pd.DataFrame(list_to_dict(fit_displayed["popts"]), index=fit_displayed["N0s"])
+            df.index.name = "Carrier concentration"
+            st.download_button("Download Parameters", df.to_csv(), "Parameters.csv", use_container_width=True)
 
-        # -------------------------------------------- CARRIER ACCUMULATION  -------------------------------------------
+            # --------------------------------------------- CONTRIBUTIONS ----------------------------------------------
 
-        if period:
-            st.markdown("""#### Carrier accumulation""")
-            if fit_mode == resources.ANALYSIS_MODE:
-                carrier_accumulation = carrier_accumulation[int(selected[0])]
-            nca_dict = dict(zip(fit_displayed["N0s_labels"], carrier_accumulation["CA"]))
-            nca_df = pd.DataFrame(nca_dict, index=["Carrier accumulation (%)"])
-            col1.markdown(nca_df.to_html(escape=False) + "<br>", unsafe_allow_html=True)
+            help_str = f"Contribution of each recombination process to the variation of the {fit_model.QUANTITY}."
+            st.markdown("#### Process Contributions", help=help_str)
+            table = generate_html_table(fit_displayed["contributions_df"])
+            st.html(table)
 
-            # figure = plot_decays(
-            #     *carrier_accumulation["Decays"],
-            #     quantity_input,
-            #     labels=["Pulse 1", "Stabilised Pulse"],
-            # )
-            # columns[1].plotly_chart(figure)
+            # Contribution analysis
+            for s in fit_model.get_contribution_recommendations(fit_displayed["contributions"]):
+                st.warning(s)
 
-            # Analysis
-            max_nca = np.max(carrier_accumulation["CA"])
-            if max_nca > 5.0:
-                ca_warning = f"""This fit predicts significant carrier accumulation leading to a maximum {max_nca:.1f} % difference 
-                                 between the single pulse and multiple pulse {quantity_input} decays. You might need to increase your 
-                                 excitation repetition period to prevent potential carrier accumulation."""
-                col1.warning(ca_warning)
-            else:
-                col1.success("This fit does not predict significant carrier accumulation.")
+            # ------------------------------------------ CARRIER ACCUMULATION  -----------------------------------------
 
-        # -------------------------------------------- CONCENTRATIONS PLOT ---------------------------------------------
+            if period:
+                help_str = f"""The carrier accumulation is calculated as the maximum difference between the simulated 
+                {fit_model.QUANTITY} after 1 excitation pulse (as used during fitting) and after multiple pulses (as 
+                during experimental measurements)."""
+                st.markdown("#### Carrier Accumulation", help=help_str)
 
-        col2.markdown("""#### Carrier concentrations""")
-        concentrations = model.get_carrier_concentrations(
-            fit_displayed["xs_data"],
-            fit_displayed["popts"],
-            period,
-        )
-        conc_fig = plot_carrier_concentrations(
-            concentrations[0],
-            concentrations[2],
-            fit_displayed["N0s"],
-            fit_displayed["N0s_labels"],
-            concentrations[1],
-            model,
-        )
-        col2.plotly_chart(conc_fig, use_container_width=True)
+                # If carrier accumulation could be calculated
+                if st.session_state.carrier_accumulation:
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ---------------------------------------------------- DATA DISPLAY ----------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
+                    # Select the selected fit carrier accumulation if grid analysis mode
+                    if isinstance(carrier_accumulation, list):
+                        carrier_accumulation = carrier_accumulation[int(selected[0])]
 
-elif xs_data[0] is not None:
+                    # Display the carrier accumulation table
+                    table = generate_html_table(carrier_accumulation["CA_df"])
+                    st.html(table)
 
-    with results_container.container():
-        st.markdown("""#### Input data""")
+                    # Display the decays
+                    figure = plot_decays(
+                        xs_data=carrier_accumulation["t"],
+                        ys_data=carrier_accumulation["Pulse 1"],
+                        quantity=fit_model.QUANTITY,
+                        ys_data2=carrier_accumulation["Pulse S"],
+                        labels=fit_displayed["N0s_labels"],
+                        label2=" (stabilised pulse)",
+                    )
+                    st.plotly_chart(figure)
+
+                    # Analysis
+                    max_ca = np.max(carrier_accumulation["CA"])
+                    if max_ca > 5.0:
+                        ca_warning = f"""This fit predicts significant carrier accumulation leading to a maximum 
+                                         {max_ca:.1f} % difference between the single pulse and multiple pulse 
+                                         {quantity_input} decays. You might need to increase your excitation repetition 
+                                         period to prevent potential carrier accumulation."""
+                        st.warning(ca_warning)
+                    else:
+                        st.success(
+                            "This fit does not predict significant carrier accumulation and is therefore "
+                            "self-consistent."
+                        )
+
+                else:
+                    warn = "Carrier accumulation could not be calculated due to excessive computational requirements."
+                    st.warning(warn)
+
+        with col2:
+
+            # -------------------------------------------- CONCENTRATIONS PLOT ---------------------------------------------
+
+            help_str = """Carrier concentrations are calculated from the fitted parameters. If a period is specified, 
+            the concentration's evolution after multiple pulses is shown until stabilisation."""
+            st.markdown("#### Carrier Concentrations", help=help_str)
+
+            # Calculate the concentrations
+            concentrations = fit_model.get_carrier_concentrations(
+                fit_displayed["xs_data"],
+                fit_displayed["popts"],
+                period if st.session_state.carrier_accumulation else 0.0,
+            )
+
+            # Plot the concentrations
+            figure = plot_carrier_concentrations(
+                xs_data=concentrations[0],
+                ys_data=concentrations[2],
+                N0s=fit_displayed["N0s"],
+                titles=fit_displayed["N0s_labels"],
+                xlabel=concentrations[1],
+                model=fit_model,
+            )
+            st.plotly_chart(figure, use_container_width=True)
+
+            # -------------------------------------------- MATCHING QUANTITY -------------------------------------------
+
+            # Determine the matching quantity and model
+            matching_quantity = {"TRPL": "TRMC", "TRMC": "TRPL"}[fit_model.QUANTITY]
+            matching_model = st.session_state.models[fit_model.MODEL][matching_quantity]
+
+            help_str = f"""The corresponding {matching_model.QUANTITY} decays are calculated from the fitting 
+            parameters. You can adjust the unknown parameters below."""
+            st.markdown(f"### Matching {matching_quantity}", help=help_str)
+
+            # Display the inputs for the matching model
+            mu, mu_e, mu_h = 0.0, 0.0, 0.0
+            if matching_model.QUANTITY == "TRMC":
+                if matching_model.MODEL == "BTD":
+                    columns = st.columns(2)
+                    mu_e = columns[0].text_input(
+                        label=matching_model.get_parameter_label("mu_e"),
+                        value="10",
+                        key="matching_input1",
+                    )
+                    mu_h = columns[1].text_input(
+                        label=matching_model.get_parameter_label("mu_h"),
+                        value="20",
+                        key="matching_input2",
+                    )
+                else:
+                    mu = st.text_input(
+                        label=matching_model.get_parameter_label("mu"),
+                        value="10",
+                        key="matching_input",
+                    )
+
+            # Try to calculate the matching quantity
+            try:
+                mu, mu_e, mu_h = float(mu), float(mu_e), float(mu_h)
+                matching_data = []
+                for popt in fit_displayed["popts"]:
+                    popt_ = merge_dicts(dict(mu_e=mu_e, mu_h=mu_h, mu=mu, I=1.0, y_0=0.0), popt)
+                    matching_data.append(matching_model.calculate_fit_quantity(t=fit_displayed["xs_data"][0], **popt_))
+
+                # Display the decays
+                figure = plot_decays(
+                    xs_data=fit_displayed["xs_data"],
+                    ys_data=matching_data,
+                    quantity=matching_model.QUANTITY,
+                    labels=fit_displayed["N0s_labels"],
+                )
+                st.plotly_chart(figure)
+
+            except:
+                st.warning("Please input correct values.")
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------- DATA DISPLAY ----------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    elif xs_data[0] is not None:
+
+        st.markdown("#### Input data")
         if N0s is not None:
-            labels = get_power_labels(N0s)
+            labels = get_concentrations_html(N0s)
         else:
             labels = None
         figure = plot_decays(
@@ -510,6 +616,14 @@ elif xs_data[0] is not None:
             labels=labels,
         )
         st.plotly_chart(figure, use_container_width=True)
+
+except FitFailedException as exception:
+    bad_fit_message = "The data could not be fitted. Try changing the parameter guess or fixed values."
+    info_message.error(bad_fit_message)
+
+except Exception as exception:
+    st.error(f"An unknown exception has happened {exception}")
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------- GENERAL INFORMATION ------------------------------------------------
@@ -731,9 +845,9 @@ with st.expander("Getting started"):
 # ------------------------------------------------------ CHANGELOG -----------------------------------------------------
 
 with st.expander("Changelog"):
-    st.markdown(read_txt_file("CHANGELOG.md"))
+    st.markdown(read_txt_file(os.path.join(dirname, "CHANGELOG.md")))
 
 # ----------------------------------------------------- DISCLAIMER -----------------------------------------------------
 
 with st.expander("License & Disclaimer"):
-    st.markdown(read_txt_file("LICENSE.txt"))
+    st.markdown(read_txt_file(os.path.join(dirname, "LICENSE.txt")))

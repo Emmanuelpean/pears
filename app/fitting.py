@@ -155,3 +155,9 @@ class Fit(object):
         :param popts: list of optimised parameter dicts"""
 
         return [self.function(x, **popt) for x, popt in zip(self.xs_data, popts)]
+
+
+class FitFailedException(Exception):
+    """Raised when a fit fails"""
+
+    pass

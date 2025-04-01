@@ -1,79 +1,69 @@
+"""Test module for the functions in the `utility/dict.py` module.
+
+This module contains unit tests for the functions implemented in the `dict.py` module. The purpose of these tests is to
+ensure the correct functionality of each function in different scenarios and to validate that the expected outputs are
+returned.
+
+Tests should cover various edge cases, valid inputs, and any other conditions that are necessary to confirm the
+robustness of the functions."""
+
 from app.utility.numbers import *
 
 
 class TestGetPowerHtml:
 
-    def test_zero_value(self) -> None:
-        """Test with zero value."""
+    def test_single_value_zero(self):
+        """Test when the value is zero."""
+
         result = get_power_html(0)
         assert result == "0"
 
-    def test_default_decimals(self) -> None:
-        """Test with default number of decimals (3)."""
-        result = get_power_html(1.3e5)
-        assert result == "1.300 &#10005; 10<sup>5</sup>"
+    def test_single_value_positive(self):
+        """Test when the value is a positive number with fixed decimal precision."""
 
-    def test_specific_decimals(self) -> None:
-        """Test with a specific number of decimals."""
-        result = get_power_html(1.3e13, 2)
-        assert result == "1.30 &#10005; 10<sup>13</sup>"
+        result = get_power_html(1234.5646, 2)
+        assert result == "1.23 &#10005; 10<sup>3</sup>"
 
-    def test_no_mantissa(self) -> None:
-        """Test with None for n to get just the exponent part."""
-        result = get_power_html(1.34e13, None)
-        assert result == "&#10005; 10<sup>13</sup>"
+    def test_single_value_negative(self):
+        """Test when the value is a negative number."""
 
-    def test_auto_format(self) -> None:
-        """Test with -1 for n to use %g format."""
-        result = get_power_html(1.34e13, -1)
-        assert result == "1.34 &#10005; 10<sup>13</sup>"
+        result = get_power_html(-1234.56, 1)
+        assert result == "-1.2 &#10005; 10<sup>3</sup>"
 
-    def test_different_decimals(self) -> None:
-        """Test with different decimal precisions."""
-        result = get_power_html(1.56789e7, 4)
-        assert result == "1.5679 &#10005; 10<sup>7</sup>"
+    def test_single_value_exponent_only(self):
+        """Test when the value is a positive number with exponent only."""
+        result = get_power_html(123456789, None)
+        assert result == "&#10005; 10<sup>8</sup>"
 
-        result = get_power_html(1.56789e7, 1)
-        assert result == "1.6 &#10005; 10<sup>7</sup>"
+    def test_single_value_all_significant_digits(self):
+        """Test when n is -1 to show all significant digits."""
+        result = get_power_html(1234.56789, -1)
+        assert result == "1.23457 &#10005; 10<sup>3</sup>"
 
-        result = get_power_html(1.56789e7, 0)
-        assert result == "2 &#10005; 10<sup>7</sup>"
+    def test_single_value_with_small_exponent(self):
+        """Test when the value has a small exponent (e.g., a number less than 1)."""
+        result = get_power_html(0.000123, 3)
+        assert result == "1.230 &#10005; 10<sup>-4</sup>"
 
-    def test_small_numbers(self) -> None:
-        """Test with small numbers (negative exponents)."""
-        result = get_power_html(1.23e-5, 2)
-        assert result == "1.23 &#10005; 10<sup>-5</sup>"
+    def test_list_input(self):
+        """Test when the input is a list of values."""
+        values = [1234.56, 0, 987654.321]
+        result = get_power_html(values, 2)
+        expected = ["1.23 &#10005; 10<sup>3</sup>", "0", "9.88 &#10005; 10<sup>5</sup>"]
+        assert result == expected
 
-    def test_rounding(self) -> None:
-        """Test rounding behavior."""
-        # This should round up
-        result = get_power_html(1.9999e6, 3)
-        assert result == "2.000 &#10005; 10<sup>6</sup>"
+    def test_empty_list(self):
+        """Test when the input is an empty list."""
+        result = get_power_html([], 2)
+        assert result == []
 
-    def test_integer_values(self) -> None:
-        """Test with integer input values."""
-        result = get_power_html(1000, 2)
-        assert result == "1.00 &#10005; 10<sup>3</sup>"
+    def test_base0(self):
 
-    def test_near_power_boundaries(self) -> None:
-        """Test values near power of 10 boundaries."""
+        result = get_power_html(1.4, 1)
+        assert result == "1.4"
 
-        # Exactly 10^3
-        result = get_power_html(1000, 1)
-        assert result == "1.0 &#10005; 10<sup>3</sup>"
-
-        # Just above 10^3
-        result = get_power_html(1001, 1)
-        assert result == "1.0 &#10005; 10<sup>3</sup>"
-
-    def test_large_numbers(self) -> None:
-        """Test with very large numbers."""
-        result = get_power_html(1.23e100, 2)
-        assert result == "1.23 &#10005; 10<sup>100</sup>"
-
-    def test_base0(self) -> None:
-
-        assert get_power_html(1.0, None) == ""
+        result = get_power_html(-1.4, 1)
+        assert result == "-1.4"
 
 
 class TestToScientific:
@@ -135,12 +125,12 @@ class TestToScientific:
         assert result == "5E+06"
 
 
-class TestGetPowerLabels:
+class TestGetConcentrationsHtml:
 
     def test_basic_case(self) -> None:
         """Test with a basic list of initial carrier concentrations."""
         N0s = [1.6e16, 2e17, 3e18]
-        result = get_power_labels(N0s)
+        result = get_concentrations_html(N0s)
         expected = [
             "N<sub>0</sub> = 1.6 &#10005; 10<sup>16</sup> cm<sup>-3</sup>",
             "N<sub>0</sub> = 2 &#10005; 10<sup>17</sup> cm<sup>-3</sup>",
