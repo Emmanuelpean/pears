@@ -1,12 +1,12 @@
 <p align="center">
-   <img src="https://github.com/Emmanuelpean/pears/blob/master/resources/medias/logo_text.svg" alt="Pears">
+   <img src="https://github.com/Emmanuelpean/pears/blob/main/resources/medias/logo_text.svg" alt="Pears">
 </p>
 <p align="center">
    <a href="https://opensource.org/licenses/MIT">
    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="Licence">
    </a>
-   <a href="https://github.com/Emmanuelpean/pears/actions?query=branch%3Amaster+event%3Apush">
-   <img src="https://github.com/emmanuelpean/pears/actions/workflows/test.yml/badge.svg?event=push&branch=master" alt="Testing">
+   <a href="https://github.com/Emmanuelpean/pears/actions?query=branch%3Amain+event%3Apush">
+   <img src="https://github.com/emmanuelpean/pears/actions/workflows/test.yml/badge.svg?event=push&branch=main" alt="Testing">
    </a>
    <a>
    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/emmanuelpean/3d13cd09334063855921d2537ee75916/raw/pytest-coverage-comment__main.json" alt="Coverage">
