@@ -1,4 +1,4 @@
-##### Version 2.0.0.0 - March 2025
+##### Version 2.0.0 - March 2025
 * **TRMC Data Support**
   * *Pears* now supports fitting time-resolved microwave photoconductivity (TRMC) data.
   * Added a "Quantity" input in the sidebar to select the type of data uploaded (TRMC or TRPL).
@@ -62,5 +62,5 @@
 * **Bug Fixes**
   * Fixed a bug that prevented changing fixed parameter values.
 
-##### Version 1.0.0.0 - October 2021
+##### Version 1.0.0 - October 2021
 * **Initial release**
