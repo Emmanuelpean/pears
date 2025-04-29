@@ -5,7 +5,6 @@ from models import BTDModelTRMC, BTDModelTRPL, BTModelTRMC, BTModelTRPL
 from utility.data import generate_download_link
 
 resources_path = path.join(path.dirname(path.dirname(__file__)), "resources")
-
 CSS_STYLE_PATH = os.path.join(resources_path, "style.css")
 
 # -------------------------------------------------------- DATA --------------------------------------------------------

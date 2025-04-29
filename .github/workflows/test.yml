@@ -35,6 +35,9 @@ jobs:
             exit $exit_code
           fi
 
+      - name: Show coverage file content
+        run: cat pytest-coverage.txt
+
       - name: Pytest Coverage Comment
         id: coverageComment
         uses: MishaKav/pytest-coverage-comment@main

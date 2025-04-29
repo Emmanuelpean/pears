@@ -11,6 +11,9 @@
    <a>
    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/emmanuelpean/3d13cd09334063855921d2537ee75916/raw/pytest-coverage-comment__main.json" alt="Coverage">
    </a>
+   <a href="https://github.com/psf/black">
+   <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Black">
+   </a>
 </p>
 
 *Pears* is a user-friendly web app designed to fit time-resolved photoluminescence (TRPL) and time-resolved microwave 
