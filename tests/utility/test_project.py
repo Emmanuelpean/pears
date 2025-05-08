@@ -17,7 +17,7 @@ from utility.project import get_last_commit_date_from_github, get_pyproject_info
 
 class TestGetLastCommitDateFromGitHub:
 
-    @patch("utils.project.requests.get")
+    @patch("utility.project.requests.get")
     def test_successful_response(self, mock_get) -> None:
 
         # Arrange
@@ -33,7 +33,7 @@ class TestGetLastCommitDateFromGitHub:
         assert result == "27 April 2024"
         mock_get.assert_called_once_with("https://api.github.com/repos/owner/repo/commits?sha=main")
 
-    @patch("utils.project.requests.get")
+    @patch("utility.project.requests.get")
     def test_custom_branch(self, mock_get) -> None:
 
         mock_response = Mock()
@@ -45,7 +45,7 @@ class TestGetLastCommitDateFromGitHub:
         assert result == "15 January 2024"
         mock_get.assert_called_once_with("https://api.github.com/repos/owner/repo/commits?sha=dev")
 
-    @patch("utils.project.requests.get")
+    @patch("utility.project.requests.get")
     def test_http_error(self, mock_get) -> None:
 
         # Arrange
@@ -62,9 +62,9 @@ class TestGetLastCommitDateFromGitHub:
 
 class TestGetPyprojectInfo:
 
-    @patch("utils.project.tomllib.load")
-    @patch("utils.project.Path.open", new_callable=mock_open)
-    @patch("utils.project.Path.resolve")
+    @patch("utility.project.tomllib.load")
+    @patch("utility.project.Path.open", new_callable=mock_open)
+    @patch("utility.project.Path.resolve")
     def test_single_key(self, mock_resolve, mock_open_file, mock_toml_load) -> None:
         # Arrange
         mock_resolve.return_value = Path("/fake/path/to/pyproject.toml")
@@ -77,9 +77,9 @@ class TestGetPyprojectInfo:
         assert result == {"poetry": {"name": "example-package"}}
         mock_open_file.assert_called_once_with("rb")
 
-    @patch("utils.project.tomllib.load")
-    @patch("utils.project.Path.open", new_callable=mock_open)
-    @patch("utils.project.Path.resolve")
+    @patch("utility.project.tomllib.load")
+    @patch("utility.project.Path.open", new_callable=mock_open)
+    @patch("utility.project.Path.resolve")
     def test_multiple_keys(self, mock_resolve, mock_open_file, mock_toml_load) -> None:
         # Arrange
         mock_resolve.return_value = Path("/fake/path/to/pyproject.toml")
@@ -92,9 +92,9 @@ class TestGetPyprojectInfo:
         assert result == "1.2.3"
         mock_open_file.assert_called_once_with("rb")
 
-    @patch("utils.project.tomllib.load")
-    @patch("utils.project.Path.open", new_callable=mock_open)
-    @patch("utils.project.Path.resolve")
+    @patch("utility.project.tomllib.load")
+    @patch("utility.project.Path.open", new_callable=mock_open)
+    @patch("utility.project.Path.resolve")
     def test_missing_key_raises_keyerror(self, mock_resolve, _mock_open_file, mock_toml_load) -> None:
         # Arrange
         mock_resolve.return_value = Path("/fake/path/to/pyproject.toml")
