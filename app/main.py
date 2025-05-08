@@ -159,14 +159,9 @@ if input_filename is not None:
         if process_input:
             xs_data, ys_data = process_data(xs_data, ys_data, quantity_input == "TRPL")
 
-        data_message.success("Data successfully loaded")
-
     except Exception as e:  # if an error occurs during the file reading
         xs_data, ys_data = [None], [None]
         data_message.error(f"Uh-oh! The data could not be loaded. Error: {e}")
-
-else:
-    data_message.info("Load a data file")
 
 
 if xs_data[0] is None:
