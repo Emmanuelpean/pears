@@ -16,6 +16,7 @@ dependencies = [
     "scipy==1.15.2",
     "pandas==2.2.3",
     "streamlit==1.42.2",
+    "hiplot==0.1.34rc200",
 ]
 
 [project.optional-dependencies]
