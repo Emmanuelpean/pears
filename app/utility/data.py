@@ -1,6 +1,7 @@
 """utils module"""
 
 import base64
+import mimetypes
 from io import StringIO
 
 import numpy as np
@@ -39,20 +40,22 @@ def matrix_to_string(
 
 @st.cache_resource
 def render_image(
-    svg_file: str,
+    file_path: str,
     width: int = 100,
-    itype: str = "svg",
 ) -> str:
-    """Render a svg file.
-    :param str svg_file: file path
-    :param int width: width in percent
-    :param str itype: image type"""
+    """Render an image file as base64 embedded HTML
+    :param str file_path: path to the image file
+    :param int width: image width in pixels
+    :return: HTML string for rendering the image"""
 
-    with open(svg_file, "rb") as ofile:
-        svg = base64.b64encode(ofile.read()).decode()
-        return (
-            f'<center><img src="data:image/{itype}+xml;base64,{svg}" id="responsive-image" width="{width}%"/></center>'
-        )
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if mime_type is None:
+        raise ValueError(f"Could not determine MIME type for file: {file_path}")
+
+    with open(file_path, "rb") as ofile:
+        encoded = base64.b64encode(ofile.read()).decode()
+
+    return f'<center><img src="data:{mime_type};base64,{encoded}" width="{width}px"/></center>'
 
 
 def generate_download_link(
@@ -187,7 +190,7 @@ def read_txt_file(path: str) -> str:
     """Read the content of a text file and store it as a resource.
     :param path: file path"""
 
-    with open(path) as ofile:
+    with open(path, encoding="utf-8") as ofile:
         return ofile.read()
 
 

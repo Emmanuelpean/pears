@@ -8,7 +8,7 @@ Tests should cover various edge cases, valid inputs, and any other conditions th
 robustness of the functions."""
 
 import os
-from unittest.mock import mock_open, patch
+import tempfile
 
 import pytest
 from bs4 import BeautifulSoup
@@ -386,114 +386,41 @@ class TestComparisonFunctions:
 
 class TestRenderImage:
 
-    def setup_method(self) -> None:
-        """Set up test environment before each test method."""
-        # Sample SVG content for testing
-        self.sample_svg_content = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
-        self.encoded_svg = base64.b64encode(self.sample_svg_content).decode()
+    def test_valid_image_file(self) -> None:
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_default_params(self, mock_file) -> None:
-        """Test render_image with default parameters."""
-        # Configure the mock to return our sample SVG content
-        mock_file.return_value.read.return_value = self.sample_svg_content
+        image_data = b"\x89PNG\r\n\x1a\n" + b"fakeimagecontent"
+        expected_mime = "image/png"
 
-        # Call the function with just the file path
-        result = render_image("test.svg")
+        # Create a temporary image file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            tmp.write(image_data)
+            tmp_path = tmp.name
 
-        # Verify the file was opened correctly
-        mock_file.assert_called_once_with("test.svg", "rb")
+        html_output = render_image(tmp_path, width=200)
 
-        # Check the returned HTML string
-        expected_html = f'<center><img src="data:image/svg+xml;base64,{self.encoded_svg}" id="responsive-image" width="100%"/></center>'
-        assert result == expected_html
+        encoded = base64.b64encode(image_data).decode()
+        expected_html = f'<center><img src="data:{expected_mime};base64,{encoded}" width="200px"/></center>'
+        assert html_output == expected_html
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_custom_width(self, mock_file) -> None:
-        """Test render_image with custom width."""
-        mock_file.return_value.read.return_value = self.sample_svg_content
+    def test_unknown_mime_type_raises(self) -> None:
 
-        # Call with custom width
-        result = render_image("test.svg", width=50)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".unknown") as tmp:
+            tmp.write(b"Some binary content")
+            tmp_path = tmp.name
 
-        # Check the width in the resulting HTML
-        expected_html = f'<center><img src="data:image/svg+xml;base64,{self.encoded_svg}" id="responsive-image" width="50%"/></center>'
-        assert result == expected_html
+        with pytest.raises(ValueError, match=r"Could not determine MIME type"):
+            render_image(tmp_path)
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_custom_itype(self, mock_file) -> None:
-        """Test render_image with custom image type."""
-        mock_file.return_value.read.return_value = self.sample_svg_content
+    def test_default_width(self) -> None:
 
-        # Call with custom image type
-        result = render_image("test.svg", itype="png")
+        image_data = b"GIF87a" + b"fakegifdata"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".gif") as tmp:
+            tmp.write(image_data)
+            tmp_path = tmp.name
 
-        # Check the image type in the resulting HTML
-        expected_html = f'<center><img src="data:image/png+xml;base64,{self.encoded_svg}" id="responsive-image" width="100%"/></center>'
-        assert result == expected_html
-
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_all_custom_params(self, mock_file) -> None:
-        """Test render_image with all custom parameters."""
-        mock_file.return_value.read.return_value = self.sample_svg_content
-
-        # Call with all custom parameters
-        result = render_image("test.svg", width=75, itype="jpeg")
-
-        # Check all parameters in the resulting HTML
-        expected_html = f'<center><img src="data:image/jpeg+xml;base64,{self.encoded_svg}" id="responsive-image" width="75%"/></center>'
-        assert result == expected_html
-
-    def test_render_image_file_not_found(self) -> None:
-        """Test render_image with non-existent file."""
-        # Test with a file that doesn't exist
-        with pytest.raises(FileNotFoundError):
-            render_image("nonexistent.svg")
-
-    @patch("builtins.open")
-    def test_render_image_read_error(self, mock_file) -> None:
-        """Test render_image with file read error."""
-        # Simulate a read error
-        mock_file.return_value.__enter__.return_value.read.side_effect = IOError("Read error")
-
-        with pytest.raises(IOError):
-            render_image("error.svg")
-
-    @pytest.mark.parametrize(
-        "width,expected_width",
-        [
-            (0, "0%"),
-            (100, "100%"),
-            (200, "200%"),
-        ],
-    )
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_various_widths(self, mock_file, width, expected_width) -> None:
-        """Test render_image with various width values."""
-        mock_file.return_value.read.return_value = self.sample_svg_content
-
-        result = render_image("test.svg", width=width)
-
-        assert f'width="{expected_width}"' in result
-
-    @pytest.mark.parametrize("itype", ["svg", "png", "jpeg", "gif", "webp"])
-    @patch("builtins.open", new_callable=mock_open)
-    def test_render_image_various_types(self, mock_file, itype) -> None:
-        """Test render_image with various image types."""
-        mock_file.return_value.read.return_value = self.sample_svg_content
-
-        result = render_image("test.svg", itype=itype)
-
-        assert f"data:image/{itype}+xml;base64" in result
-
-    def test_streamlit_cache_decorator(self) -> None:
-        """Test that the st.cache_resource decorator is applied to the function."""
-        # Verify that the function is decorated with st.cache_resource
-        # This is a bit tricky to test directly, but we can check if the function has
-        # the attributes that Streamlit adds to cached functions
-
-        # This assumes the original function is correctly decorated with @st.cache_resource
-        assert hasattr(render_image, "__wrapped__")
+        html_output = render_image(tmp_path)
+        assert 'width="100px"' in html_output
+        assert "data:image/gif;base64," in html_output
 
 
 class TestReadTxtFile:
@@ -550,7 +477,7 @@ class TestReadTxtFile:
 
 class TestGenerateHtmlTable:
     @pytest.fixture
-    def sample_dataframe(self):
+    def sample_dataframe(self) -> pd.DataFrame:
         """Create a sample dataframe for testing."""
 
         data = {"A": [1, 2, 3, 4], "B": [5, 6, 7, 8], "C": [9, 10, 11, 12]}
@@ -558,7 +485,7 @@ class TestGenerateHtmlTable:
         return df
 
     @pytest.fixture
-    def dataframe_with_identical_rows(self):
+    def dataframe_with_identical_rows(self) -> pd.DataFrame:
         """Create a dataframe with some identical rows."""
 
         data = {"A": [1, 2, 2, 3], "B": [5, 2, 2, 7], "C": [9, 2, 2, 11]}
@@ -566,7 +493,7 @@ class TestGenerateHtmlTable:
         return df
 
     @pytest.fixture
-    def dataframe_with_column_name(self):
+    def dataframe_with_column_name(self) -> pd.DataFrame:
         """Create a dataframe with a column name."""
 
         data = {"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]}
@@ -574,7 +501,7 @@ class TestGenerateHtmlTable:
         df.columns.name = "Categories"
         return df
 
-    def test_basic_table_generation(self, sample_dataframe):
+    def test_basic_table_generation(self, sample_dataframe) -> None:
         """Test basic HTML table generation."""
 
         html = generate_html_table(sample_dataframe)
@@ -600,7 +527,7 @@ class TestGenerateHtmlTable:
             cells = row.find_all("td")
             assert cells[0].text == f"row{i + 1}"  # Check row name
 
-    def test_merged_cells_for_identical_values(self, dataframe_with_identical_rows):
+    def test_merged_cells_for_identical_values(self, dataframe_with_identical_rows) -> None:
         """Test that cells are merged when all values in a row are identical."""
         html = generate_html_table(dataframe_with_identical_rows)
 
@@ -623,7 +550,7 @@ class TestGenerateHtmlTable:
         assert len(row1.find_all("td")) == 4  # 1 row name + 3 data cells
         assert len(row4.find_all("td")) == 4  # 1 row name + 3 data cells
 
-    def test_column_name_in_corner(self, dataframe_with_column_name):
+    def test_column_name_in_corner(self, dataframe_with_column_name) -> None:
         """Test that the column name appears in the corner cell."""
         html = generate_html_table(dataframe_with_column_name)
 
@@ -632,7 +559,7 @@ class TestGenerateHtmlTable:
 
         assert corner_cell.text == "Categories"
 
-    def test_empty_corner_cell_with_no_column_name(self, sample_dataframe):
+    def test_empty_corner_cell_with_no_column_name(self, sample_dataframe) -> None:
         """Test that the corner cell is empty when no column name is provided."""
         html = generate_html_table(sample_dataframe)
 
@@ -641,7 +568,7 @@ class TestGenerateHtmlTable:
 
         assert corner_cell.text == ""
 
-    def test_div_wrapper(self, sample_dataframe):
+    def test_div_wrapper(self, sample_dataframe) -> None:
         """Test that the table is wrapped in a div with correct styling."""
         html = generate_html_table(sample_dataframe)
 

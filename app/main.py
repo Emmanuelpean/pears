@@ -36,6 +36,7 @@ dirname = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # General setup & layout
 st.set_page_config("Pears", resources.ICON_PATH, layout="wide")
+st.logo(resources.LOGO_TEXT_PATH, icon_image=resources.LOGO_PATH)
 
 if "results" not in st.session_state:
     st.session_state.results = []  # list of all the results
@@ -72,8 +73,7 @@ set_style()
 # -------------------------------------------------------- INPUT -------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-logo_placeholder = st.empty()
-st.sidebar.markdown(render_image(resources.LOGO_PATH, 20), unsafe_allow_html=True)  # sidebar logo
+logo_placeholder = st.container()
 info_message = st.empty()
 
 # -------------------------------------------------------- MODES -------------------------------------------------------
@@ -170,7 +170,12 @@ else:
 
 
 if xs_data[0] is None:
-    logo_placeholder.markdown(render_image(resources.LOGO_TEXT_PATH, 50), unsafe_allow_html=True)  # main logo
+    logo_placeholder.html(render_image(resources.LOGO_PATH, 100))  # main logo
+    title_string = """<div style="text-align: center; font-family: sans-serif; font-size: 45px; line-height: 1.3;
+    color: rgb(230, 204, 0)">PEARS</div>
+    <div style="text-align: center; font-family: sans-serif; font-size: 45px; line-height: 1.3;color: rgb(230, 204, 0)">
+    <strong>Pe</strong>rorvskite C<strong>a</strong>rrier <strong>R</strong>ecombination <strong>S</strong>imulator</div>"""
+    logo_placeholder.html(title_string)
 
 
 # ------------------------------------------------------ FLUENCES ------------------------------------------------------
@@ -789,7 +794,7 @@ with st.expander("Model & Computational Details"):
     (10<sup>-20</sup>, 10<sup>-2</sup>), (10<sup>-19</sup>, 10<sup>-3</sup>) and (10<sup>-19</sup>, 10<sup>-2</sup>)). 
     Note that in the case of the bimolecular-trapping-detrapping model, only set of guess values satisfying $k_T>k_B$ 
     and $k_T>k_D$ are considered to keep the computational time reasonable. Fitting is then carried using each set of 
-    guess values as schematically represented below: {render_image(resources.OPT_GUESS_PATH, 60, "png")}
+    guess values as schematically represented below: {render_image(resources.OPT_GUESS_PATH, 60)}
     In the case where all the optimisations converge towards a similar solution, it can be assumed that only 1 solution
     exist and that therefore the parameter values obtained accurately describe the system measured. However, if the fits 
     converge toward multiple solutions, it is not possible to ascertain which solution represents the system accurately.

@@ -23,7 +23,7 @@ BTD_TRMC_LINK = generate_download_link(BTD_TRMC_DATA[:2], BTD_header, text="TRMC
 # ------------------------------------------------------- IMAGES -------------------------------------------------------
 
 
-LOGO_TEXT_PATH = path.join(resources_path, "medias/logo_text.svg")
+LOGO_TEXT_PATH = path.join(resources_path, "medias/logo_text.png")
 LOGO_PATH = path.join(resources_path, "medias/logo.svg")
 MODELS_PATH = path.join(resources_path, "medias/models.svg")
 ICON_PATH = path.join(resources_path, "medias/icon.png")

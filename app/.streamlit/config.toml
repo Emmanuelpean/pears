@@ -1,6 +1,6 @@
 [theme]
 base="light"
-primaryColor="#cfa500"
+primaryColor="rgb(230, 204, 0)"
 
 [client]
 toolbarMode = "minimal"
