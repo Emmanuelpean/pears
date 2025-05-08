@@ -1,5 +1,7 @@
-name: Test
-on: push
+name: Test and Deploy
+
+on:
+  push:
 
 permissions:
   contents: write
@@ -20,54 +22,32 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Update Pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install Requirements
-        run: python -m pip install -r requirements.txt
+      - name: Update pip and install dependencies
+        run: | 
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
 
       - name: Run Tests with Pytest and Coverage
         run: |
-          pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov=app tests/ | tee pytest-coverage.txt
-          exit_code=${PIPESTATUS[0]}
-          if [ $exit_code -ne 0 ]; then
-            echo "Tests failed. Exiting with code $exit_code."
-            exit $exit_code
-          fi
+          coverage run -m pytest --junitxml=reports/tests/tests.xml --html=reports/tests/report.html
 
-      - name: Show coverage file content
-        run: cat pytest-coverage.txt
-
-      - name: Pytest Coverage Comment
-        id: coverageComment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-coverage-path: ./pytest-coverage.txt
-          junitxml-path: ./pytest.xml
-
-      - name: Check the Output Coverage
+      - name: Generate badges and coverage
         run: |
-          echo "Coverage Percentage - ${{ steps.coverageComment.outputs.coverage }}"
-          echo "Coverage Color - ${{ steps.coverageComment.outputs.color }}"
-          echo "Coverage Html - ${{ steps.coverageComment.outputs.coverageHtml }}"
-          echo "Coverage Warnings - ${{ steps.coverageComment.outputs.warnings }}"
-          echo "Coverage Errors - ${{ steps.coverageComment.outputs.errors }}"
-          echo "Coverage Failures - ${{ steps.coverageComment.outputs.failures }}"
-          echo "Coverage Skipped - ${{ steps.coverageComment.outputs.skipped }}"
-          echo "Coverage Tests - ${{ steps.coverageComment.outputs.tests }}"
-          echo "Coverage Time - ${{ steps.coverageComment.outputs.time }}"
-          echo "Not Success Test Info - ${{ steps.coverageComment.outputs.notSuccessTestInfo }}"
+          genbadge tests --input-file=reports/tests/tests.xml --output-file=reports/tests/tests-badge.svg
+          coverage html
+          coverage xml
+          genbadge coverage --output-file=reports/coverage/coverage-badge.svg
+          coverage html
 
-      - name: Create the Badge
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.PYTEST_COVERAGE_COMMENT }}
-          gistID: 3d13cd09334063855921d2537ee75916
-          filename: pytest-coverage-comment__main.json
-          label: Coverage Report
-          message: ${{ steps.coverageComment.outputs.coverage }}
-          color: ${{ steps.coverageComment.outputs.color }}
-          namedLogo: python
+      - name: Commit and push badge
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add -f reports/
+          git commit -m "Added reports"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.PYTEST_COVERAGE_COMMENT }}
 
   deploy:
     name: Deploy to VPS
