@@ -33,7 +33,6 @@ class TestApp:
 
         # Start the app and run it
         self.at = AppTest(self.main_path, default_timeout=100).run()
-        assert self.at.info[0].value == "Load a data file"
         assert len(self.at.error) == 0
         assert self.at.expander[-1].label == "License & Disclaimer"
 

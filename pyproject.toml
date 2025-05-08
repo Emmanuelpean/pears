@@ -1,0 +1,49 @@
+[project]
+name = "pears"
+version = "2.0.0"
+description = "Perovskite Carrier Recombination Simulator"
+authors = [
+    { name = "Emmanuel V. Péan", email = "emmanuel.pean@gmail.com" }
+]
+license = "MIT"
+#readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "setuptools",
+    "numpy==2.2.5",
+    "plotly==6.0.1",
+    "scipy==1.15.2",
+    "pandas==2.2.3",
+    "streamlit==1.42.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.5",
+    "pytest-cov==6.1.1",
+    "beautifulsoup4==4.13.3",
+    "wfork-streamlit-profiler==1.3.0",
+    "black==25.1.0",
+    "genbadge[all]==1.1.2",
+    "pytest-html==4.1.1"
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+repository = "https://github.com/emmanuelpean/pears"
+
+[tool.coverage.run]
+data_file = "reports/coverage/.coverage"
+
+[tool.coverage.html]
+directory = "reports/coverage/htmlcov"
+
+[tool.coverage.xml]
+output = "reports/coverage/coverage.xml"
+
+[tool.setuptools.packages.find]
+exclude = ["reports*", "resources*"]

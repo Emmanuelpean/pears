@@ -24,9 +24,14 @@ from fitting import FitFailedException
 from utility.data import load_data, matrix_to_string, process_data, render_image, read_txt_file, generate_html_table
 from utility.dict import merge_dicts, list_to_dict
 from utility.numbers import get_concentrations_html, to_scientific
+from utility.project import get_last_commit_date_from_github, get_pyproject_info
 
-__version__ = "2.0.0"
-__date__ = "March 2025"
+__version__ = get_pyproject_info("project", "version")
+__name__ = get_pyproject_info("project", "name")
+__description__ = get_pyproject_info("project", "description")
+__github__ = get_pyproject_info("project", "urls", "repository")
+__date__ = get_last_commit_date_from_github(__github__, "type-hints")
+__author__ = get_pyproject_info("project", "authors")[0]["name"]
 
 dirname = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
