@@ -657,7 +657,7 @@ to over-parameterisation and ambiguous results.\n
 identify whether multiple sets of parameters yield fitting solutions, as discussed in https://doi.org/10.1002/smtd.202400818. 
 If the optimisations do not converge to the same values, the fitting may be inaccurate due to the presence of multiple 
 possible solutions.\n
-App created and maintained by [Emmanuel V. Pean](https://emmanuelpean.streamlit.app/).  
+App created and maintained by [Emmanuel V. Péan](https://emmanuelpean.me).  
 [Version {__version__}](https://github.com/Emmanuelpean/pears) (last updated: {__date__}).  
 If you use *Pears* to fit your TRPL or TRMC data, please cite https://doi.org/10.1021/acs.jcim.3c00217."""
     )
