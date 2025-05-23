@@ -37,6 +37,18 @@ identify whether multiple sets of parameters yield fitting solutions, as discuss
 If the optimisations do not converge to the same values, the fitting may be inaccurate due to the presence of multiple 
 possible solutions.
 
-App created and maintained by Emmanuel V. Pean.  
-Version 2.0.0 (last updated: March 2025).  
 If you use *Pears* to fit your TRPL or TRMC data, please cite https://doi.org/10.1021/acs.jcim.3c00217.
+
+## Installation
+
+Create and activate a virtual environment, activate it, and run:
+```console
+$ pip install -e .[dev]
+```
+
+## Usage
+To run the app locally, run:
+```console
+$ cd app
+$ streamlit run ./main.py
+```

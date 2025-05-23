@@ -40,7 +40,7 @@ dirname = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ----------------------------------------------------------------------------------------------------------------------
 
 # General setup & layout
-st.set_page_config("Pears", resources.ICON_PATH, layout="wide")
+st.set_page_config(__name__.upper() + " - " + __description__, resources.ICON_PATH, layout="wide")
 st.logo(resources.LOGO_TEXT_PATH, icon_image=resources.LOGO_PATH)
 
 if "results" not in st.session_state:
