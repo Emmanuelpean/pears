@@ -20,6 +20,7 @@ The classes are:
 """
 
 import itertools
+from typing import Any, Callable
 
 import numpy as np
 import scipy.integrate as sci
@@ -108,7 +109,7 @@ class Model(object):
         gvalues: dict[str, float],
         gvalues_range: dict[str, list[float]],
         n_keys: list[str],
-        n_init: callable,
+        n_init: Callable,
         conc_ca_ids: list[str],
         param_filters: list[str],
     ):
@@ -149,7 +150,7 @@ class Model(object):
 
         self.factors_html = {key: get_power_html(self.factors[key], None) for key in self.factors}
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Used to check if this object is the same as another object"""
 
         condition = (
@@ -238,7 +239,7 @@ class Model(object):
         self,
         params: list[dict[str, float]],
         period: float,
-    ) -> dict[str:list]:
+    ) -> dict[str, list]:
         """Calculate the carrier accumulation effect on the TRPL.
         :param params: list of arguments passed to calculate_fit_quantity.
         :param period: excitation repetition period in ns."""

@@ -3,11 +3,12 @@
 import datetime as dt
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import requests
 
 
-def get_pyproject_info(*keys: str) -> any:
+def get_pyproject_info(*keys: str) -> Any:
     """Get information from the pyproject file"""
 
     pyproject = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"

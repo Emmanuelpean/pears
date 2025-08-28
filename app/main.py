@@ -680,7 +680,7 @@ with st.expander("Model & Computational Details"):
 
     with col1:
         st.markdown("<h3 style='text-align: center; '>Bimolecular-Trapping-Auger model</h3>", unsafe_allow_html=True)
-        st.markdown(render_image(resources.BT_MODEL_PATH, 65), unsafe_allow_html=True)
+        st.markdown(render_image(resources.BT_MODEL_PATH, 350), unsafe_allow_html=True)
         st.latex(r"n_e(t)=n_h(t)=n(t)")
         st.latex(r"\frac{dn}{dt}=-k_Tn-k_Bn^2-k_An^3,\ \ \ n^p(t=0)=n^{p-1}(T)+N_0")
         st.latex(r"I_{TRPL} \propto n^2")
@@ -697,7 +697,7 @@ with st.expander("Model & Computational Details"):
         st.markdown(
             "<h3 style='text-align: center; '>Bimolecular-Trapping-Detrapping model</h3>", unsafe_allow_html=True
         )
-        st.markdown(render_image(resources.BTD_MODEL_PATH, 65), unsafe_allow_html=True)
+        st.markdown(render_image(resources.BTD_MODEL_PATH, 350), unsafe_allow_html=True)
         st.latex(r"\frac{dn_e}{dt}=-k_B n_e (n_h+p_0 )-k_T n_e [N_T-n_t ],\ \ \ n_e^p(t=0)=n_e^{p-1}(T)+N_0")
         st.latex(r"\frac{dn_t}{dt}=k_T n_e [N_T-n_t]-k_D n_t (n_h+p_0 ),\ \ \ n_t^p(t=0)=n_t^{p-1}(T)")
         st.latex(r"\frac{dn_h}{dt}=-k_B n_e (n_h+p_0 )-k_D n_t (n_h+p_0 ),\ \ \ n_h^p(t=0)=n_h^{p-1}(T)+N_0")

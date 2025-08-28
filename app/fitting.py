@@ -1,5 +1,7 @@
 """fitting module"""
 
+from typing import Callable
+
 import numpy as np
 import scipy.optimize as sco
 
@@ -46,7 +48,7 @@ class Fit(object):
         self,
         xs_data: list[np.ndarray],
         ys_data: list[np.ndarray],
-        function: callable,
+        function: Callable,
         p0: dict,
         detached_parameters: list[str],
         fixed_parameters: list[dict],

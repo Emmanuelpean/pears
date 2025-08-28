@@ -3,6 +3,7 @@
 import base64
 import mimetypes
 from io import StringIO
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -99,8 +100,8 @@ def process_data(
 
 
 def are_identical(
-    obj1: any,
-    obj2: any,
+    obj1: Any,
+    obj2: Any,
     rtol: float | None = None,
 ) -> bool:
     """Check if two objects are identical.
@@ -146,6 +147,7 @@ def get_data_index(
     >>> get_data_index(['first line', 'second line', '1 2 3'])
     2"""
 
+    # noinspection PyInconsistentReturns
     for index, line in enumerate(content):
 
         if line != "":
