@@ -63,4 +63,4 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /home/my_apps/scripts/
-            ./deploy_pears.sh
+            sudo -u deploy ./deploy_pears.sh
