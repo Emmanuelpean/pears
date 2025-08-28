@@ -9,40 +9,33 @@ permissions:
 
 jobs:
   build:
+    environment:
+      name: production
     runs-on: ubuntu-latest
     steps:
-      - name: Check if tests should be skipped
-        id: check_skip
-        run: |
-          if [[ "${GITHUB_HEAD_COMMIT_MESSAGE}" == *"[skip tests]"* ]]; then
-            echo "skip=true" >> $GITHUB_ENV
-          else
-            echo "skip=false" >> $GITHUB_ENV
-          fi
 
       - name: Checkout Repository
-        if: env.skip == 'false'
         uses: actions/checkout@v4
 
       - name: Install Python
-        if: env.skip == 'false'
+        if: "!contains(github.event.head_commit.message, '[skip tests]')"
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Update pip and install dependencies
-        if: env.skip == 'false'
+        if: "!contains(github.event.head_commit.message, '[skip tests]')"
         run: | 
           python -m pip install --upgrade pip
           python -m pip install .[dev]
 
       - name: Run Tests with Pytest and Coverage
-        if: env.skip == 'false'
+        if: "!contains(github.event.head_commit.message, '[skip tests]')"
         run: |
           coverage run -m pytest --junitxml=reports/tests/tests.xml --html=reports/tests/report.html
 
       - name: Generate badges and coverage
-        if: env.skip == 'false'
+        if: "!contains(github.event.head_commit.message, '[skip tests]')"
         run: |
           genbadge tests --input-file=reports/tests/tests.xml --output-file=reports/tests/tests-badge.svg
           coverage html
@@ -51,7 +44,7 @@ jobs:
           coverage html
 
       - name: Commit and push badge
-        if: env.skip == 'false'
+        if: "!contains(github.event.head_commit.message, '[skip tests]')"
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -60,10 +53,6 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.PYTEST_COVERAGE_COMMENT }}
-
-      - name: Mark build as skipped
-        if: env.skip == 'true'
-        run: echo "Build skipped by commit message"
 
   deploy:
     name: Deploy to VPS
