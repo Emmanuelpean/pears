@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   build:
+    if: "!contains(github.event.head_commit.message, '[skip tests]')"
     environment:
       name: production
     runs-on: ubuntu-latest
@@ -63,4 +64,4 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /home/my_apps/scripts/
-            sudo -u deploy ./deploy_pears.sh
+            sudo -u deployuser ./deploy_pears.sh
